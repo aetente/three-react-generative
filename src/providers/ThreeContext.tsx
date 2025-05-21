@@ -1,22 +1,22 @@
 "use client"
 
-import { createContext, useContext, useEffect, useMemo, useState } from 'react'
+import { createContext, useContext, useEffect, useState } from 'react'
 import * as THREE from 'three'
 
-type IAppContext = {
-  scene: any
-  renderer: any
-}
+type IThreeContext = {
+  scene: THREE.Scene
+  renderer: THREE.WebGLRenderer
+} | null
 
-const ThreeContext = createContext<IAppContext>(null)
+const ThreeContext = createContext<IThreeContext>(null)
 
-export const useThreeContext = () => useContext(ThreeContext) as IAppContext
+export const useThreeContext = () => useContext(ThreeContext) as IThreeContext
 
 export const ThreeProvider: React.FC<{
-  children: any
+  children: React.ReactNode
 }> = ({ children }) => {
 
-  const [context, setContext] = useState({})
+  const [context, setContext] = useState<IThreeContext>(null)
 
   useEffect(() => {
     const scene = new THREE.Scene();
