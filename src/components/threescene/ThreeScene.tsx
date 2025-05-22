@@ -5,6 +5,9 @@ import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import Cube from "../cube/Cube";
+import MeshProvider from "@/providers/MeshContext";
+import BoxGeometry from "../BoxGeometry/BoxGeometry";
+import MeshBasicMaterial from "../MeshBasicMaterial/MeshBasicMaterial";
 
 export default function ThreeScene() {
 
@@ -54,7 +57,16 @@ export default function ThreeScene() {
 
   return (
     <div ref={containerRef}>
-      <Cube />
+      {/* <Cube /> */}
+      <MeshProvider>
+        <BoxGeometry />
+        <MeshBasicMaterial />
+      </MeshProvider>
+      
+      <MeshProvider position={[1, 1, 1]}>
+        <BoxGeometry />
+        <MeshBasicMaterial color={[0, 1, 0]} />
+      </MeshProvider>
     </div>
   )
 }
