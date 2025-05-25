@@ -8,6 +8,7 @@ import Cube from "../cube/Cube";
 import MeshProvider from "@/providers/MeshContext";
 import BoxGeometry from "../BoxGeometry/BoxGeometry";
 import MeshBasicMaterial from "../MeshBasicMaterial/MeshBasicMaterial";
+import MeshStandardMaterial from "../MeshStandardMaterial/MeshStandardMaterial";
 
 export default function ThreeScene() {
 
@@ -51,6 +52,12 @@ export default function ThreeScene() {
 
       controls.maxPolarAngle = Math.PI / 2;
 
+      const light = new THREE.DirectionalLight(0xffffff, 1);
+      light.position.set(2, 2, 2);
+      scene.add(light);
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
+      scene.add(ambientLight);
+
       animate(cameraThree);
     }
   }, [threeContext])
@@ -60,7 +67,7 @@ export default function ThreeScene() {
       {/* <Cube /> */}
       <MeshProvider>
         <BoxGeometry />
-        <MeshBasicMaterial />
+        <MeshStandardMaterial texture="/textures/generated_building/brick_wall3.png" />
       </MeshProvider>
       
       <MeshProvider position={[1, 1, 1]}>

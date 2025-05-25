@@ -8,9 +8,10 @@ type IMeshContext = {
   mesh?: THREE.Mesh
   geometry?: THREE.BufferGeometry
   material?: THREE.Material
+  texture?: THREE.Texture
   setGeometry: (geometry: THREE.BufferGeometry) => void
   setTexture: (texture: THREE.Texture) => void
-  setMaterial: (material: THREE.Material) => void
+  setMaterial: (mesh: THREE.Mesh,material: THREE.Material) => void
 } | null
 
 const MeshContext = createContext<IMeshContext>(null)
@@ -35,22 +36,21 @@ const MeshProvider = ({
       threeContext?.scene.add(mesh);
       const actualPosition = position || [0, 0, 0]
       mesh.position.set(actualPosition[0], actualPosition[1], actualPosition[2]);
-      setContext(prevContext => ({ ...prevContext, mesh, geometry }))
+      setContext(previousContext => ({ ...previousContext, mesh, geometry }))
       // context.mesh.geometry = geometry
     // }
   }
 
   const setTexture = (texture: THREE.Texture) => {
-    if (context?.mesh?.material) {
-      context.mesh.material.map = texture
-    }
+    setContext(previousContext => ({ ...previousContext, texture }))
   }
 
   const setMaterial = (mesh: THREE.Mesh, material: THREE.Material) => {
-    if (mesh) {
-      mesh.material = material
-      setContext(prevContext => ({ ...prevContext, mesh, material }))
-    }
+      setContext(previousContext => {
+        if (!previousContext?.mesh) return previousContext
+        previousContext.mesh.material = material
+        return { ...previousContext, material }
+      })
   }
 
   
