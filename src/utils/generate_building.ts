@@ -45,12 +45,14 @@ const generateBuilding = () => {
     const buildingFloors = [];
     let arr = [];
     let buildingPartsRow = [];
+    const placedPartsPositions : { [key: string]: boolean } = {};
     for (let floor = 0; floor < floors; floor++) {
       for (let i = 1; i < columns.length; i++) {
         for (let j = 1; j < rows.length; j++) {
           let b;
-          if (Math.random() > 0.3) {
-
+          const putPart = Math.random() > 0.3;
+          if ((floor === 0 || placedPartsPositions[`${i}-${j}`]) && putPart) {
+            placedPartsPositions[`${i}-${j}`] = true;
             const x = columns[i - 1];
             const y = rows[j - 1];
 
@@ -59,8 +61,10 @@ const generateBuilding = () => {
 
             b = new BuildingPart(x, y, width, length);
 
-          }
-          else {
+          } else {
+            if (placedPartsPositions[`${i}-${j}`]) {
+              placedPartsPositions[`${i}-${j}`] = false;
+            }
             b = new BuildingPart(0, 0, 0, 0, false);
           }
           buildingPartsRow.push(b);

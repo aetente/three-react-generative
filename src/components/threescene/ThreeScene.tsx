@@ -57,10 +57,12 @@ export default function ThreeScene() {
       controls.maxPolarAngle = Math.PI / 2;
 
       const light = new THREE.DirectionalLight(0xffffff, 1);
-      light.position.set(200, 200, 200);
+      light.position.set(-200, 200, 200);
       scene.add(light);
       const ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
       scene.add(ambientLight);
+
+      scene.background = new THREE.Color(0.7, 0.7, 0.7);
 
       animate(cameraThree);
     }
@@ -90,8 +92,9 @@ export default function ThreeScene() {
                 buidlingMinHeight / 2 * (2 * floor + 1),
                 buildingParts[floor][i][j].y + buildingParts[floor][i][j].length / 2
               ];
+              const isSmallWall = scale[0] < 0.4 || scale[1] < 0.4 || scale[2] < 0.4;
 
-              const textureIndex = Math.random() > 0.5 ? 0 : 3;
+              const textureIndex = isSmallWall || Math.random() > 0.5 ? 0 : 3;
 
               cubes.push((
                 <React.Fragment key={`${floor}-${i}-${j}`}>
