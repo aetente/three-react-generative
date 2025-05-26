@@ -20,10 +20,12 @@ export const useMeshContext = () => useContext(MeshContext)
 
 const MeshProvider = ({
   children,
-  position
+  position,
+  scale
 } : {
   children: React.ReactNode
   position?: [number, number, number]
+  scale?: [number, number, number]
 }) => {
 
   const threeContext = useThreeContext();
@@ -36,6 +38,8 @@ const MeshProvider = ({
       threeContext?.scene.add(mesh);
       const actualPosition = position || [0, 0, 0]
       mesh.position.set(actualPosition[0], actualPosition[1], actualPosition[2]);
+      const actualScale = scale || [1, 1, 1]
+      mesh.scale.set(actualScale[0], actualScale[1], actualScale[2]);
       setContext(previousContext => ({ ...previousContext, mesh, geometry }))
       // context.mesh.geometry = geometry
     // }

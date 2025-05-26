@@ -1,5 +1,9 @@
 import * as THREE from "three";
 
+const randInRange = (xmin:number, xmax:number, randVal:number) => (
+    (xmax - xmin) * randVal + xmin
+)
+
 const loadTextureF = async (url: string) => {
   return new Promise((resolve, reject) => {
     // const texture : THREE.Texture;
@@ -18,4 +22,4 @@ const loadTextureF = async (url: string) => {
    });
 }
 
-export {loadTextureF}
+export {loadTextureF, randInRange}

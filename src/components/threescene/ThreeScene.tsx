@@ -1,18 +1,20 @@
 "use client"
 
 import { useThreeContext } from "@/providers/ThreeContext";
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import Cube from "../cube/Cube";
+// import Cube from "../cube/Cube";
 import MeshProvider from "@/providers/MeshContext";
 import BoxGeometry from "../BoxGeometry/BoxGeometry";
-import MeshBasicMaterial from "../MeshBasicMaterial/MeshBasicMaterial";
+// import MeshBasicMaterial from "../MeshBasicMaterial/MeshBasicMaterial";
 import MeshStandardMaterial from "../MeshStandardMaterial/MeshStandardMaterial";
+import { BuildingPart, generateBuilding } from "@/utils/generate_building";
 
 export default function ThreeScene() {
 
   const [camera, setCamera] = useState<THREE.Camera>();
+  const [buildingParts, setBuildingParts] = useState<BuildingPart[][][]>([]);
 
   const threeContext = useThreeContext();
 
@@ -27,6 +29,8 @@ export default function ThreeScene() {
 
   useEffect(() => {
     if (threeContext?.scene && typeof window !== 'undefined') {
+      setBuildingParts(generateBuilding())
+
       const { scene, renderer } = threeContext
       const cameraThree = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 
@@ -47,13 +51,13 @@ export default function ThreeScene() {
 
       controls.screenSpacePanning = false;
 
-      controls.minDistance = 5;
-      controls.maxDistance = 5;
+      controls.minDistance = 10;
+      controls.maxDistance = 10;
 
       controls.maxPolarAngle = Math.PI / 2;
 
       const light = new THREE.DirectionalLight(0xffffff, 1);
-      light.position.set(2, 2, 2);
+      light.position.set(200, 200, 200);
       scene.add(light);
       const ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
       scene.add(ambientLight);
@@ -62,18 +66,81 @@ export default function ThreeScene() {
     }
   }, [threeContext])
 
+  const mapBuildingParts = (buildingParts: BuildingPart[][][]) => {
+    const cubes = []
+    const buidlingMinHeight = 1;
+    for (let floor = 0; floor < buildingParts.length; floor++) {
+      for (let i = 0; i < buildingParts[floor].length; i++) {
+        for (let j = 0; j < buildingParts[floor][i].length; j++) {
+
+          if (buildingParts[floor][i][j].isValid) {
+            if (
+              (i == 0 || !buildingParts[floor][i - 1][j].isValid) &&
+              (j == 0 || !buildingParts[floor][i][j - 1].isValid) &&
+              (i == buildingParts[floor].length - 1 || !buildingParts[floor][i + 1][j].isValid) &&
+              (j == buildingParts[floor][i].length - 1 || !buildingParts[floor][i][j + 1].isValid)
+            ) {
+              buildingParts[floor][i][j].isValid = false;
+            }
+            else {
+
+              const scale : [number, number, number] = [buildingParts[floor][i][j].width, buidlingMinHeight, buildingParts[floor][i][j].length];
+              const position: [number, number, number] = [
+                buildingParts[floor][i][j].x + buildingParts[floor][i][j].width / 2,
+                buidlingMinHeight / 2 * (2 * floor + 1),
+                buildingParts[floor][i][j].y + buildingParts[floor][i][j].length / 2
+              ];
+
+              const textureIndex = Math.random() > 0.5 ? 0 : 3;
+
+              cubes.push((
+                <React.Fragment key={`${floor}-${i}-${j}`}>
+                  <MeshProvider scale={scale} position={position}>
+                    <BoxGeometry />
+                    <MeshStandardMaterial texture={`/textures/generated_building/brick_wall${textureIndex}.png`} />
+                  </MeshProvider>
+                </React.Fragment>
+              ))
+
+              const roofScale : [number, number, number] = [buildingParts[floor][i][j].width + 0.5, 0.1, buildingParts[floor][i][j].length + 0.5];
+              const roofPosition : [number, number, number] = [
+                buildingParts[floor][i][j].x + buildingParts[floor][i][j].width / 2,
+                buidlingMinHeight * (floor + 1),
+                buildingParts[floor][i][j].y + buildingParts[floor][i][j].length / 2
+              ];
+
+              cubes.push((
+                <React.Fragment key={`roof-${floor}-${i}-${j}`}>
+                  <MeshProvider scale={roofScale} position={roofPosition}>
+                    <BoxGeometry />
+                    <MeshStandardMaterial color={[0,0,0]} />
+                  </MeshProvider>
+                </React.Fragment>
+              ))
+
+
+
+            }
+          }
+        }
+      }
+    }
+    return cubes
+  }
+
   return (
     <div ref={containerRef}>
       {/* <Cube /> */}
-      <MeshProvider>
+      {/* <MeshProvider>
         <BoxGeometry />
         <MeshStandardMaterial texture="/textures/generated_building/brick_wall3.png" />
       </MeshProvider>
-      
+
       <MeshProvider position={[1, 1, 1]}>
         <BoxGeometry />
         <MeshBasicMaterial color={[0, 1, 0]} />
-      </MeshProvider>
+      </MeshProvider> */}
+      {mapBuildingParts(buildingParts)}
     </div>
   )
 }
