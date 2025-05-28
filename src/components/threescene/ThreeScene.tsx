@@ -14,7 +14,7 @@ import { BuildingPart, generateBuilding } from "@/utils/generate_building";
 export default function ThreeScene() {
 
   const [camera, setCamera] = useState<THREE.Camera>();
-  const [buildingParts, setBuildingParts] = useState<BuildingPart[][][]>([]);
+  const [buildingParts, setBuildingParts] = useState<BuildingPart[]>([]);
 
   const threeContext = useThreeContext();
 
@@ -68,73 +68,62 @@ export default function ThreeScene() {
     }
   }, [threeContext])
 
-  const mapBuildingParts = (buildingParts: BuildingPart[][][]) => {
+  const mapBuildingParts = (buildingParts: BuildingPart[]) => {
     const cubes = []
     const buidlingMinHeight = 1;
-    for (let floor = 0; floor < buildingParts.length; floor++) {
-      for (let i = 0; i < buildingParts[floor].length; i++) {
-        for (let j = 0; j < buildingParts[floor][i].length; j++) {
+    console.log(buildingParts)
+    for (let i = 0; i < buildingParts.length; i++) {
 
-          if (buildingParts[floor][i][j].isValid) {
-            if (
-              (i == 0 || !buildingParts[floor][i - 1][j].isValid) &&
-              (j == 0 || !buildingParts[floor][i][j - 1].isValid) &&
-              (i == buildingParts[floor].length - 1 || !buildingParts[floor][i + 1][j].isValid) &&
-              (j == buildingParts[floor][i].length - 1 || !buildingParts[floor][i][j + 1].isValid)
-            ) {
-              buildingParts[floor][i][j].isValid = false;
-            }
-            else {
+      const scale: [number, number, number] = [buildingParts[i].width, buidlingMinHeight, buildingParts[i].length];
+      const position: [number, number, number] = [
+        buildingParts[i].x + buildingParts[i].width / 2,
+        buildingParts[i].z,
+        buildingParts[i].y + buildingParts[i].length / 2,
+      ];
+      const isSmallWall = scale[0] < 0.4 || scale[1] < 0.4 || scale[2] < 0.4;
+      if (!isSmallWall) {
+        console.log(scale)
+      }
 
-              const scale : [number, number, number] = [buildingParts[floor][i][j].width, buidlingMinHeight, buildingParts[floor][i][j].length];
-              const position: [number, number, number] = [
-                buildingParts[floor][i][j].x + buildingParts[floor][i][j].width / 2,
-                buidlingMinHeight / 2 * (2 * floor + 1),
-                buildingParts[floor][i][j].y + buildingParts[floor][i][j].length / 2
-              ];
-              const isSmallWall = scale[0] < 0.4 || scale[1] < 0.4 || scale[2] < 0.4;
+      const textureIndex = isSmallWall || Math.random() > 0.5 ? 0 : 3;
 
-              const textureIndex = isSmallWall || Math.random() > 0.5 ? 0 : 3;
+      cubes.push((
+        <React.Fragment key={`${i}`}>
+          <MeshProvider scale={scale} position={position}>
+            <BoxGeometry />
+            <MeshStandardMaterial texture={`/textures/generated_building/brick_wall${textureIndex}.png`} />
+          </MeshProvider>
+        </React.Fragment>
+      ))
 
-              cubes.push((
-                <React.Fragment key={`${floor}-${i}-${j}`}>
-                  <MeshProvider scale={scale} position={position}>
-                    <BoxGeometry />
-                    <MeshStandardMaterial texture={`/textures/generated_building/brick_wall${textureIndex}.png`} />
-                  </MeshProvider>
-                </React.Fragment>
-              ))
+      if (buildingParts[i].hasRoof) {
 
-              const roofScale : [number, number, number] = [buildingParts[floor][i][j].width + 0.5, 0.1, buildingParts[floor][i][j].length + 0.5];
-              const roofPosition : [number, number, number] = [
-                buildingParts[floor][i][j].x + buildingParts[floor][i][j].width / 2,
-                buidlingMinHeight * (floor + 1),
-                buildingParts[floor][i][j].y + buildingParts[floor][i][j].length / 2
-              ];
+        const roofScale: [number, number, number] = [buildingParts[i].width + 0.2, 0.1, buildingParts[i].length + 0.2];
+        const roofPosition: [number, number, number] = [
+          buildingParts[i].x + buildingParts[i].width / 2,
+          buildingParts[i].z + buidlingMinHeight / 2,
+          buildingParts[i].y + buildingParts[i].length / 2,
+        ];
 
-              cubes.push((
-                <React.Fragment key={`roof-${floor}-${i}-${j}`}>
-                  <MeshProvider scale={roofScale} position={roofPosition}>
-                    <BoxGeometry />
-                    <MeshStandardMaterial color={[0,0,0]} />
-                  </MeshProvider>
-                </React.Fragment>
-              ))
+        cubes.push((
+          <React.Fragment key={`roof-${i}`}>
+            <MeshProvider scale={roofScale} position={roofPosition}>
+              <BoxGeometry />
+              <MeshStandardMaterial color={[0, 0, 0]} />
+            </MeshProvider>
+          </React.Fragment>
+        ))
 
-
-
-            }
-          }
-        }
       }
     }
-    return cubes
-  }
 
-  return (
-    <div ref={containerRef}>
-      {/* <Cube /> */}
-      {/* <MeshProvider>
+  return cubes
+}
+
+return (
+  <div ref={containerRef}>
+    {/* <Cube /> */}
+    {/* <MeshProvider>
         <BoxGeometry />
         <MeshStandardMaterial texture="/textures/generated_building/brick_wall3.png" />
       </MeshProvider>
@@ -143,7 +132,7 @@ export default function ThreeScene() {
         <BoxGeometry />
         <MeshBasicMaterial color={[0, 1, 0]} />
       </MeshProvider> */}
-      {mapBuildingParts(buildingParts)}
-    </div>
-  )
+    {mapBuildingParts(buildingParts)}
+  </div>
+)
 }

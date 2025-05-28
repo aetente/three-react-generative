@@ -3,12 +3,15 @@ import { randInRange } from "./loadTexture";
 class BuildingPart {
   public x;
   public y;
+  public z;
   public width;
   public length;
   public isValid;
-  constructor(xValue: number, yValue: number, widthValue: number, lengthValue: number, isValidValue?: boolean) {
+  public hasRoof;
+  constructor(xValue: number, yValue: number, zValue: number,widthValue: number, lengthValue: number, isValidValue?: boolean) {
     this.x = xValue;
     this.y = yValue;
+    this.z = zValue;
     this.width = widthValue;
     this.length = lengthValue;
     if (typeof isValidValue === 'undefined') {
@@ -16,6 +19,11 @@ class BuildingPart {
     } else {
       this.isValid = isValidValue;
     }
+    this.hasRoof = false;
+  }
+
+  public setRoof() {
+    this.hasRoof = true;
   }
 }
 
@@ -42,42 +50,41 @@ const generateBuilding = () => {
   }
 
   const generateBuildingParts = (rows:number[], columns:number[]) => {
-    const buildingFloors = [];
-    let arr = [];
-    let buildingPartsRow = [];
-    const placedPartsPositions : { [key: string]: boolean } = {};
+    const placedPartsPositions : { [key: string]: BuildingPart } = {};
     for (let floor = 0; floor < floors; floor++) {
       for (let i = 1; i < columns.length; i++) {
         for (let j = 1; j < rows.length; j++) {
           let b;
           const putPart = Math.random() > 0.3;
-          if ((floor === 0 || placedPartsPositions[`${i}-${j}`]) && putPart) {
-            placedPartsPositions[`${i}-${j}`] = true;
+          if ((floor === 0 ||
+            ((placedPartsPositions[`${floor - 1}-${i}-${j}`] &&
+              !placedPartsPositions[`${floor - 1}-${i}-${j}`]?.hasRoof
+            ))) &&
+            putPart
+          ) {
             const x = columns[i - 1];
             const y = rows[j - 1];
+            const z = floor;
 
             const width = columns[i] - x;
             const length = rows[j] - y;
 
-            b = new BuildingPart(x, y, width, length);
+            b = new BuildingPart(x, y, z, width, length);
+            if (floor == floors - 1) b.setRoof();
+            
+            placedPartsPositions[`${floor}-${i}-${j}`] = b;
 
           } else {
-            if (placedPartsPositions[`${i}-${j}`]) {
-              placedPartsPositions[`${i}-${j}`] = false;
+            if (placedPartsPositions[`${floor - 1}-${i}-${j}`]) {
+              placedPartsPositions[`${floor - 1}-${i}-${j}`].setRoof();
             }
-            b = new BuildingPart(0, 0, 0, 0, false);
           }
-          buildingPartsRow.push(b);
         }
-        arr.push(buildingPartsRow);
-        buildingPartsRow = [];
       }
-      buildingFloors.push(arr);
-      arr = [];
     }
 
 
-    return buildingFloors;
+    return Object.values(placedPartsPositions);
 
 
   }
