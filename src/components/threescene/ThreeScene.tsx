@@ -3,25 +3,22 @@
 import { useThreeContext } from "@/providers/ThreeContext";
 import React, { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { FirstPersonControls } from 'three/addons/controls/FirstPersonControls.js';
 // import Cube from "../cube/Cube";
-import MeshProvider from "@/providers/MeshContext";
-import BoxGeometry from "../BoxGeometry/BoxGeometry";
-// import MeshBasicMaterial from "../MeshBasicMaterial/MeshBasicMaterial";
-import MeshStandardMaterial from "../MeshStandardMaterial/MeshStandardMaterial";
-import { BuildingPart, generateBuilding } from "@/utils/generate_building";
 
-export default function ThreeScene() {
+export default function ThreeScene({children}: {children: React.ReactNode}) {
 
   const [camera, setCamera] = useState<THREE.Camera>();
-  const [buildingParts, setBuildingParts] = useState<BuildingPart[]>([]);
 
   const threeContext = useThreeContext();
 
   const containerRef = useRef<HTMLDivElement>(null);
 
-  function animate(camera: THREE.Camera) {
-    requestAnimationFrame(() => animate(camera));
+  function animate(camera: THREE.Camera, controls: FirstPersonControls, clock: THREE.Clock) {
+    requestAnimationFrame(() => animate(camera, controls, clock));
+
+    const delta = clock.getDelta();
+    controls.update(delta);
 
     const { scene, renderer } = threeContext;
     renderer.render(scene, camera);
@@ -29,7 +26,6 @@ export default function ThreeScene() {
 
   useEffect(() => {
     if (threeContext?.scene && typeof window !== 'undefined') {
-      setBuildingParts(generateBuilding())
 
       const { scene, renderer } = threeContext
       const cameraThree = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -37,24 +33,36 @@ export default function ThreeScene() {
       renderer.setSize(window.innerWidth, window.innerHeight);
       containerRef.current?.appendChild(renderer.domElement);
 
+      // TODO: separate component for camera
       scene.add(cameraThree)
       cameraThree.position.set(0, 0, 5);
       setCamera(cameraThree);
 
-      const controls = new OrbitControls(cameraThree, renderer.domElement);
-      controls.listenToKeyEvents(window); // optional
+      // const controls = new FirstPersonControls(cameraThree, renderer.domElement);
+      // controls.listenToKeyEvents(window); // optional
 
-      //controls.addEventListener( 'change', render ); // call this only in static scenes (i.e., if there is no animation loop)
+      // //controls.addEventListener( 'change', render ); // call this only in static scenes (i.e., if there is no animation loop)
 
-      controls.enableDamping = true; // an animation loop is required when either damping or auto-rotation are enabled
-      controls.dampingFactor = 0.05;
+      // controls.enableDamping = true; // an animation loop is required when either damping or auto-rotation are enabled
+      // controls.dampingFactor = 0.05;
 
-      controls.screenSpacePanning = false;
+      // controls.screenSpacePanning = false;
 
-      controls.minDistance = 10;
-      controls.maxDistance = 10;
+      // controls.minDistance = 10;
+      // controls.maxDistance = 10;
 
-      controls.maxPolarAngle = Math.PI / 2;
+      // controls.maxPolarAngle = Math.PI / 2;
+
+      // TODO: separate component for controls (includes clock)
+      const controls = new FirstPersonControls(cameraThree, renderer.domElement);
+      controls.movementSpeed = 5; // How fast the camera moves
+      controls.lookSpeed = 0.1;  // How fast the camera rotates with mouse movement
+      controls.noFly = false;      // If true, disables movement along the y-axis
+      controls.constrainVertical = true; // Limits vertical look angle
+      controls.verticalMin = 0.5;  // Lower limit for vertical look (radians)
+      controls.verticalMax = 2.5;  // Upper limit for vertical look (radians)
+      controls.lon = -90;          // Initial horizontal look angle (degrees)
+      controls.lat = 0; // Initial vertical look angle (degrees)
 
       const light = new THREE.DirectionalLight(0xffffff, 1);
       light.position.set(-200, 200, 200);
@@ -64,75 +72,19 @@ export default function ThreeScene() {
 
       scene.background = new THREE.Color(0.7, 0.7, 0.7);
 
-      animate(cameraThree);
+      const clock = new THREE.Clock();
+
+      // TODO: make some callback which could be used to animate the scene
+      // like for example how would I animate moving cube? 
+      animate(cameraThree, controls, clock);
     }
   }, [threeContext])
 
-  const mapBuildingParts = (buildingParts: BuildingPart[]) => {
-    const cubes = []
-    const buidlingMinHeight = 1;
-    console.log(buildingParts)
-    for (let i = 0; i < buildingParts.length; i++) {
-
-      const scale: [number, number, number] = [buildingParts[i].width, buidlingMinHeight, buildingParts[i].length];
-      const position: [number, number, number] = [
-        buildingParts[i].x + buildingParts[i].width / 2,
-        buildingParts[i].z,
-        buildingParts[i].y + buildingParts[i].length / 2,
-      ];
-      const isSmallWall = scale[0] < 0.4 || scale[1] < 0.4 || scale[2] < 0.4;
-      if (!isSmallWall) {
-        console.log(scale)
-      }
-
-      const textureIndex = isSmallWall || Math.random() > 0.5 ? 0 : 3;
-
-      cubes.push((
-        <React.Fragment key={`${i}`}>
-          <MeshProvider scale={scale} position={position}>
-            <BoxGeometry />
-            <MeshStandardMaterial texture={`/textures/generated_building/brick_wall${textureIndex}.png`} />
-          </MeshProvider>
-        </React.Fragment>
-      ))
-
-      if (buildingParts[i].hasRoof) {
-
-        const roofScale: [number, number, number] = [buildingParts[i].width + 0.2, 0.1, buildingParts[i].length + 0.2];
-        const roofPosition: [number, number, number] = [
-          buildingParts[i].x + buildingParts[i].width / 2,
-          buildingParts[i].z + buidlingMinHeight / 2,
-          buildingParts[i].y + buildingParts[i].length / 2,
-        ];
-
-        cubes.push((
-          <React.Fragment key={`roof-${i}`}>
-            <MeshProvider scale={roofScale} position={roofPosition}>
-              <BoxGeometry />
-              <MeshStandardMaterial color={[0, 0, 0]} />
-            </MeshProvider>
-          </React.Fragment>
-        ))
-
-      }
-    }
-
-  return cubes
-}
+  
 
 return (
   <div ref={containerRef}>
-    {/* <Cube /> */}
-    {/* <MeshProvider>
-        <BoxGeometry />
-        <MeshStandardMaterial texture="/textures/generated_building/brick_wall3.png" />
-      </MeshProvider>
-
-      <MeshProvider position={[1, 1, 1]}>
-        <BoxGeometry />
-        <MeshBasicMaterial color={[0, 1, 0]} />
-      </MeshProvider> */}
-    {mapBuildingParts(buildingParts)}
+    {children}
   </div>
 )
 }
