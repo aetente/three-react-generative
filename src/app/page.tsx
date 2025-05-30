@@ -1,14 +1,13 @@
-import GeneratedBuilding from "@/components/GeneratedBuilding/GeneratedBuilding";
-import ThreeScene from "@/components/threescene/ThreeScene";
-import { ThreeProvider } from "@/providers/ThreeContext";
+import ThreeCanonExample from "@/components/ThreeCanonExample";
+import { ThreeCanonProvider } from "@/providers/ThreeCanonProvider";
 
 
 export default function Home() {
   return (
     <div>
-      <ThreeProvider>
-        <GeneratedBuilding />
-      </ThreeProvider>
+      <ThreeCanonProvider>
+        <ThreeCanonExample />
+      </ThreeCanonProvider>
     </div>
   );
 }
