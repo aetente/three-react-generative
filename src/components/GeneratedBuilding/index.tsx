@@ -3,9 +3,9 @@
 import MeshProvider from "@/providers/MeshContext";
 import { BuildingPart, generateBuilding } from "@/utils/generate_building";
 import React, { useEffect, useState } from "react";
-import BoxGeometry from "../BoxGeometry/BoxGeometry";
-import MeshStandardMaterial from "../MeshStandardMaterial/MeshStandardMaterial";
-import ThreeScene from "../threescene/ThreeScene";
+import BoxGeometry from "../BoxGeometry";
+import MeshStandardMaterial from "../MeshStandardMaterial";
+import ThreeScene from "../threescene";
 
 const GeneratedBuilding = () => {
 

@@ -1,17 +1,17 @@
 "use client"
 
-import { useThreeCanonContext } from "@/providers/ThreeCanonProvider";
 import React, { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import * as CANNON from "cannon";
 import { FirstPersonControls } from 'three/addons/controls/FirstPersonControls.js';
+import { useThreeContext } from "@/providers/ThreeContext";
 // import Cube from "../cube/Cube";
 
 export default function ThreeCanonScene({children}: {children: React.ReactNode}) {
 
   const [camera, setCamera] = useState<THREE.Camera>();
 
-  const threeCanonContext = useThreeCanonContext();
+  const threeContext = useThreeContext();
 
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -23,7 +23,7 @@ export default function ThreeCanonScene({children}: {children: React.ReactNode})
 
     world.step(delta);
 
-    const { scene, renderer, bodies } = threeCanonContext;
+    const { scene, renderer, bodies } = threeContext;
 
     for (const body of bodies) {
       body.mesh.position.copy(body.body.position);
@@ -34,9 +34,9 @@ export default function ThreeCanonScene({children}: {children: React.ReactNode})
   }
 
   useEffect(() => {
-    if (threeCanonContext?.scene && typeof window !== 'undefined') {
+    if (threeContext?.scene && typeof window !== 'undefined') {
 
-      const { scene, renderer, world } = threeCanonContext
+      const { scene, renderer, world } = threeContext
       const cameraThree = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 
       renderer.setSize(window.innerWidth, window.innerHeight);
@@ -72,7 +72,7 @@ export default function ThreeCanonScene({children}: {children: React.ReactNode})
       // like for example how would I animate moving cube? 
       animate(world, cameraThree, controls, clock);
     }
-  }, [threeCanonContext])
+  }, [threeContext])
 
   
 

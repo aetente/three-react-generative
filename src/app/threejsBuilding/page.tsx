@@ -1,5 +1,5 @@
-import GeneratedBuilding from "@/components/GeneratedBuilding/GeneratedBuilding";
-import ThreeScene from "@/components/threescene/ThreeScene";
+import GeneratedBuilding from "@/components/GeneratedBuilding";
+import ThreeScene from "@/components/threescene";
 import { ThreeProvider } from "@/providers/ThreeContext";
 
 

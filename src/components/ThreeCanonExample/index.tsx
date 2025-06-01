@@ -1,20 +1,25 @@
-import PhysicsMeshProvider from "@/providers/PhysicsMeshContext";
 import ThreeCanonScene from "../ThreeCanonScene";
-import PhysicsMeshBasicMaterial from "../PhysicsMeshBasicMaterial/PhysicsMeshBasicMaterial";
-import PhysicsBoxGeometry from "../PhysicsBoxGeometry/PhysicsBoxGeometry";
+import MeshProvider from "@/providers/MeshContext";
+import MeshStandardMaterial from "../MeshStandardMaterial";
+import BoxGeometry from "../BoxGeometry";
+import BoxShape from "../BoxShape";
 
 const ThreeCanonExample = () => {
-  return (<ThreeCanonScene>
-    <PhysicsMeshProvider position={[4.5, 10, 0]}>
-      <PhysicsMeshBasicMaterial color={[1, 0, 0]} />
-      <PhysicsBoxGeometry />
-    </PhysicsMeshProvider>
-    
-    <PhysicsMeshProvider mass={0} scale={[10,1,10]} position={[0, -2, 0]}>
-      <PhysicsMeshBasicMaterial color={[0, 1, 0]} />
-      <PhysicsBoxGeometry />
-    </PhysicsMeshProvider>
-  </ThreeCanonScene>)
+  return (
+    <ThreeCanonScene>
+      <MeshProvider position={[4.5, 10, 0]}>
+        <MeshStandardMaterial color={[1, 0, 0]} />
+        <BoxGeometry />
+        <BoxShape />
+      </MeshProvider>
+
+      <MeshProvider mass={0} scale={[10, 1, 10]} position={[0, -2, 0]}>
+        <MeshStandardMaterial color={[0, 1, 0]} />
+        <BoxGeometry />
+        <BoxShape />
+      </MeshProvider>
+    </ThreeCanonScene>
+  );
 }
 
 export default ThreeCanonExample;

@@ -1,13 +1,13 @@
 import ThreeCanonExample from "@/components/ThreeCanonExample";
-import { ThreeCanonProvider } from "@/providers/ThreeCanonProvider";
+import { ThreeProvider } from "@/providers/ThreeContext";
 
 
 export default function Home() {
   return (
     <div>
-      <ThreeCanonProvider>
+      <ThreeProvider>
         <ThreeCanonExample />
-      </ThreeCanonProvider>
+      </ThreeProvider>
     </div>
   );
 }

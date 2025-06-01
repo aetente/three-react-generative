@@ -1,3 +1,5 @@
+"use client"
+
 import { useMeshContext } from "@/providers/MeshContext"
 import { useThreeContext } from "@/providers/ThreeContext"
 import { useEffect } from "react"
