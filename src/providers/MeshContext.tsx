@@ -39,7 +39,7 @@ const MeshProvider = ({
 
   // to fix warning "Cannot update a component while rendering a different component"
   // and to probably fix addBody function being called twice
-  const [shouldUpdateBodes, setShouldUpdateBodies] = useState(false);
+  const [shouldUpdateBodies, setShouldUpdateBodies] = useState(false);
   const [bodyToAdd, setBodyToAdd] = useState<{ body: CANNON.Body, mesh: THREE.Mesh }>({ body: null, mesh: null });
 
 
@@ -91,12 +91,12 @@ const MeshProvider = ({
   useEffect(() => {
     // to fix warning "Cannot update a component while rendering a different component"
     // and to probably fix addBody function being called twice
-    if (shouldUpdateBodes && bodyToAdd?.body && bodyToAdd?.mesh && threeContext?.addBody) {
+    if (shouldUpdateBodies && bodyToAdd?.body && bodyToAdd?.mesh && threeContext?.addBody) {
       threeContext?.addBody(bodyToAdd.body, bodyToAdd.mesh);
       setShouldUpdateBodies(false);
       setBodyToAdd({ body: null, mesh: null });
     }
-  }, [shouldUpdateBodes, bodyToAdd, threeContext?.addBody])
+  }, [shouldUpdateBodies, bodyToAdd, threeContext?.addBody])
 
 
   useEffect(() => {

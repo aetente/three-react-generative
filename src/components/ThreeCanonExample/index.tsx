@@ -3,10 +3,14 @@ import MeshProvider from "@/providers/MeshContext";
 import MeshStandardMaterial from "../MeshStandardMaterial";
 import BoxGeometry from "../BoxGeometry";
 import BoxShape from "../BoxShape";
+import Camera from "../Camera";
+import FirstPersonControlsComponent from "../FirstPersonControlsComponent";
 
 const ThreeCanonExample = () => {
   return (
     <ThreeCanonScene>
+      <Camera position={[0, 0, 20]} />
+      <FirstPersonControlsComponent />
       <MeshProvider position={[4.5, 10, 0]}>
         <MeshStandardMaterial color={[1, 0, 0]} />
         <BoxGeometry />
