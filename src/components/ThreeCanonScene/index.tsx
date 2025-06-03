@@ -7,7 +7,7 @@ import { FirstPersonControls } from 'three/addons/controls/FirstPersonControls.j
 import { useThreeContext } from "@/providers/ThreeContext";
 // import Cube from "../cube/Cube";
 
-export default function ThreeCanonScene({children}: {children: React.ReactNode}) {
+export default function ThreeCanonScene({ children }: { children: React.ReactNode }) {
 
   const threeContext = useThreeContext();
 
@@ -17,9 +17,18 @@ export default function ThreeCanonScene({children}: {children: React.ReactNode})
 
 
   const animate = () => {
-    const { scene, camera, renderer, bodies, frameFunctions, clock } = threeContextRef.current;
+    const { scene, camera, renderer, bodies, frameFunctions, clock, isSimulationPaused } = threeContextRef.current;
     
-    const delta = clock.getDelta();
+    requestAnimationFrame(() => animate());
+
+    if (isSimulationPaused) {
+        // If paused, don't step the physics world
+        renderer.render(scene, camera); // You might still want to render the static scene
+        return;
+    }
+
+    let delta = clock.getDelta();
+    delta = Math.min(delta, 0.1);
     frameFunctions?.forEach((frameFunction) => {
       frameFunction(delta)
     });
@@ -32,7 +41,6 @@ export default function ThreeCanonScene({children}: {children: React.ReactNode})
     if (scene && renderer && camera) {
       renderer.render(scene, camera);
     }
-    requestAnimationFrame(() => animate());
   }
 
   useEffect(() => {
@@ -53,6 +61,19 @@ export default function ThreeCanonScene({children}: {children: React.ReactNode})
 
       scene.background = new THREE.Color(0.7, 0.7, 0.7);
 
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+          // Tab is hidden, pause the simulation
+          threeContext.setIsSimulationPaused(true);
+          console.log("Simulation paused due to tab inactivity.");
+        } else {
+          // Tab is visible, resume the simulation
+          threeContext.setIsSimulationPaused(false);
+          // IMPORTANT: Reset lastTime to current time to avoid a huge deltaTime
+          console.log("Simulation resumed.");
+        }
+      });
+
       animate();
       setStartedScene(true);
     }
@@ -62,11 +83,11 @@ export default function ThreeCanonScene({children}: {children: React.ReactNode})
     threeContextRef.current = threeContext;
   }, [threeContext]);
 
-  
 
-return (
-  <div ref={containerRef}>
-    {children}
-  </div>
-)
+
+  return (
+    <div ref={containerRef}>
+      {children}
+    </div>
+  )
 }

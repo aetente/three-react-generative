@@ -14,11 +14,13 @@ type IThreeContext = {
   frameFunctions?: ((delta?: number) => void)[]
   clock?: THREE.Clock
   startedScene?: boolean
+  isSimulationPaused?: boolean
   addBody: (body: CANNON.Body, mesh: THREE.Mesh) => void
   addCamera: (camera: THREE.Camera) => void
   addControls: (controls: THREE.FirstPersonControls | THREE.OrbitControls) => void
   addFrameFunction: (frameFunction: () => void) => void
   setStartedScene: (startedScene: boolean) => void
+  setIsSimulationPaused: (isSimulationPaused: boolean) => void
 } | null
 
 const ThreeContext = createContext<IThreeContext>(null)
@@ -46,6 +48,8 @@ export const ThreeProvider: React.FC<{
 
   const setStartedScene = (startedScene: boolean) => setContext(previousContext => ({ ...previousContext, startedScene }))
 
+  const setIsSimulationPaused = (isSimulationPaused: boolean) => setContext(previousContext => ({ ...previousContext, isSimulationPaused }))
+
   useEffect(() => {
     const scene = new THREE.Scene();
     const renderer = new THREE.WebGLRenderer();
@@ -61,11 +65,13 @@ export const ThreeProvider: React.FC<{
       clock,
       frameFunctions:[doWorldUpdate],
       startedScene: false,
+      isSimulationPaused: false,
       addBody,
       addCamera,
       addControls,
       addFrameFunction,
-      setStartedScene
+      setStartedScene,
+      setIsSimulationPaused
     })
   }, [])
 
