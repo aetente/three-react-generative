@@ -61,7 +61,7 @@ const MeshProvider = ({
 
     shape.halfExtents.set(actualScale[0] / 2, actualScale[1] / 2, actualScale[2] / 2);
     shape.updateConvexPolyhedronRepresentation();
-    if (typeof shape.boundingSphereRadius === 'function') {
+    if (typeof shape.computeBoundingSphereRadius === 'function') {
       shape?.computeBoundingSphereRadius();
     }
     const body = new CANNON.Body({ mass: actualMass });

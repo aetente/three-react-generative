@@ -6,6 +6,7 @@ import BoxShape from "../BoxShape";
 import Camera from "../Camera";
 import FirstPersonControlsComponent from "../FirstPersonControlsComponent";
 import Car from "../Car";
+import SillyCar from "../SillyCar";
 
 const ThreeCanonExample = () => {
   return (
@@ -18,7 +19,9 @@ const ThreeCanonExample = () => {
         <BoxShape />
       </MeshProvider>
 
-      <Car />
+      {/* <Car /> */}
+
+      <SillyCar />
 
       <MeshProvider mass={0} scale={[100, 1, 100]} position={[0, -2, 0]}>
         <MeshStandardMaterial color={[0, 1, 0]} />
