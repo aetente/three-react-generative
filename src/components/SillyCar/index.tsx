@@ -17,27 +17,31 @@ const SillyCar = () => {
   const wheelDimensions = { radius: 0.5, height: 0.25 };
 
   const wheelsPositions = [
-    [1, 0.25, 2.5], // right front wheel
-    [-1, 0.25, 2.5], // left front wheel
-    [1, 0.25, -2.5], // right back wheel
-    [-1, 0.25, -2.5], // left back wheel
+    [1, 0.25, 2.5], // left front wheel (red)
+    [-1, 0.25, 2.5], // right front wheel (blue)
+    [1, 0.25, -2.5], // left back wheel
+    [-1, 0.25, -2.5], // right back wheel
   ]
 
   const testMove = () => {
     if (wheels.length) {
       console.log("MMOOOOOVVE")
-      const forceMagnitude = 5000;
+      const forceMagnitude = -50000;
 
-      // Define the force vector (e.g., in the positive Y direction)
-      const forceVector = new CANNON.Vec3(0, forceMagnitude, 0);
+      const forceVector = new CANNON.Vec3(
+        -forceMagnitude, //forward
+        0, // up
+        0 // side
+      );
 
       // Define the point (local to the body) where the force is applied
       // This point must be offset from the center of mass to create torque
-      const localPoint = new CANNON.Vec3(0, 0, wheelDimensions.radius);
-      wheels[2].applyLocalForce(forceVector, localPoint);
-      wheels[3].applyLocalForce(forceVector, localPoint);
-      // wheels[2]?.angularVelocity.set(0, 0, 10000);
-      // wheels[3]?.angularVelocity.set(0, 0, 10000);
+      const localPoint = new CANNON.Vec3(0, 0, 0);
+      // wheels[2].applyLocalForce(forceVector, localPoint);
+      // wheels[3].applyLocalForce(forceVector, localPoint);
+      const angularVelocityVal = 100;
+      wheels[2]?.angularVelocity.set(angularVelocityVal, 0, 0);
+      wheels[3]?.angularVelocity.set(angularVelocityVal, 0, 0);
     }
   }
 
@@ -92,10 +96,10 @@ const SillyCar = () => {
       console.log(car)
       wheels.forEach((wheel, i) => {
         console.log(wheel)
-        const wheelGeometry = new THREE.CylinderGeometry(wheelDimensions.radius, wheelDimensions.radius, wheelDimensions.height, 32);
+        const wheelGeometry = new THREE.CylinderGeometry(wheelDimensions.radius, wheelDimensions.radius, wheelDimensions.height, 8);
         // wheelGeometry.rotateZ(Math.PI / 2); // Rotate the cylinder to match the cannon js wheel's orientation
         wheelGeometry.rotateX(Math.PI / 2);
-        const wheelMesh = new THREE.Mesh(wheelGeometry, new THREE.MeshStandardMaterial({ color: 0x000000 }));
+        const wheelMesh = new THREE.Mesh(wheelGeometry, new THREE.MeshStandardMaterial({ color: i == 0 ? 0xff0000 : i == 1 ? 0x0000ff : 0x000000 }));
         wheelMesh.useQuaternion = true;
         threeContext?.scene.add(wheelMesh);
         wheelMesh.position.set(wheel.position.x, wheel.position.y, wheel.position.z);
@@ -113,7 +117,8 @@ const SillyCar = () => {
       setFinished(true);
 
       setTimeout(() => {
-        testMove();
+        threeContext?.addFrameFunction(testMove);
+        // testMove();
       }, 2000);
 
     }
