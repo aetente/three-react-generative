@@ -2,19 +2,20 @@
 
 import { createContext, useContext, useEffect, useState } from 'react';
 import * as THREE from 'three';
-import * as CANNON from "cannon";
 import { useThreeContext } from './ThreeContext';
+import RAPIER from '@dimforge/rapier3d';
 
 type IMeshContext = {
   mesh?: THREE.Mesh
   geometry?: THREE.BufferGeometry
   material?: THREE.Material
   texture?: THREE.Texture
-  body?: CANNON.Body
+  body?: RAPIER.RigidBody
+  scale?: [number, number, number]
   setGeometry: (geometry: THREE.BufferGeometry) => void
   setTexture: (texture: THREE.Texture) => void
   setMaterial: (mesh: THREE.Mesh, material: THREE.Material) => void
-  setShape: (shape: CANNON.Shape) => void
+  setShape: (shape: RAPIER.Shape) => void
 } | null
 
 const MeshContext = createContext<IMeshContext>(null)
@@ -25,12 +26,14 @@ const MeshProvider = ({
   children,
   position,
   scale,
-  mass
+  mass,
+  isStatic
 }: {
   children: React.ReactNode
   position?: [number, number, number]
   scale?: [number, number, number]
   mass?: number
+  isStatic?: boolean
 }) => {
 
   const threeContext = useThreeContext();
@@ -40,7 +43,7 @@ const MeshProvider = ({
   // to fix warning "Cannot update a component while rendering a different component"
   // and to probably fix addBody function being called twice
   const [shouldUpdateBodies, setShouldUpdateBodies] = useState(false);
-  const [bodyToAdd, setBodyToAdd] = useState<{ body: CANNON.Body, mesh: THREE.Mesh }>({ body: null, mesh: null });
+  const [bodyToAdd, setBodyToAdd] = useState<{ body: RAPIER.RigidBody, mesh: THREE.Mesh }>({ body: null, mesh: null });
 
 
   const setGeometry = (geometry: THREE.BufferGeometry) => {
@@ -53,27 +56,44 @@ const MeshProvider = ({
     setContext(previousContext => ({ ...previousContext, mesh, geometry }))
   }
 
-  const setShape = (shape: CANNON.Shape) => {
-
+  const setShape = (shape: RAPIER.Shape) => {
     const actualScale = scale || [1, 1, 1];
     const actualMass = mass || mass === 0 ? mass : 1;
     const actualPosition = position || [0, 0, 0];
 
-    shape.halfExtents.set(actualScale[0] / 2, actualScale[1] / 2, actualScale[2] / 2);
-    shape.updateConvexPolyhedronRepresentation();
-    if (typeof shape.computeBoundingSphereRadius === 'function') {
-      shape?.computeBoundingSphereRadius();
-    }
-    const body = new CANNON.Body({ mass: actualMass });
 
-    body.addShape(shape)
-    body.position.x = actualPosition[0];
-    body.position.y = actualPosition[1];
-    body.position.z = actualPosition[2];
-    threeContext?.world.addBody(body);
+
+    // shape.halfExtents.set(actualScale[0] / 2, actualScale[1] / 2, actualScale[2] / 2);
+    // shape.updateConvexPolyhedronRepresentation();
+    // if (typeof shape.computeBoundingSphereRadius === 'function') {
+    //   shape?.computeBoundingSphereRadius();
+    // }
+    const colliderDesc = new RAPIER.ColliderDesc(shape);
+    let bodyDesc;
+    if (isStatic) {
+      bodyDesc = RAPIER.RigidBodyDesc.fixed()
+        .setAdditionalMass(actualMass)
+        .setTranslation(actualPosition[0], actualPosition[1], actualPosition[2]);
+    } else {
+      bodyDesc = RAPIER.RigidBodyDesc.dynamic()
+        .setAdditionalMass(actualMass)
+        .setTranslation(actualPosition[0], actualPosition[1], actualPosition[2]);
+    }
+
+    const body = threeContext?.world.createRigidBody(bodyDesc);
+    const collider = threeContext?.world.createCollider(colliderDesc, body);
+
+
+    // body.addShape(shape)
+    // body.position.x = actualPosition[0];
+    // body.position.y = actualPosition[1];
+    // body.position.z = actualPosition[2];
+    // threeContext?.world.addBody(body);
+
+    // threeContext?.world.createRigidBody()
     setContext(previousContext => {
       setShouldUpdateBodies(true);
-      setBodyToAdd({ body, mesh: previousContext?.mesh });
+      setBodyToAdd({ body: collider.parent() as RAPIER.RigidBody, mesh: previousContext?.mesh });
       return { ...previousContext, body }
     });
   }
@@ -107,7 +127,8 @@ const MeshProvider = ({
         setGeometry,
         setTexture,
         setMaterial,
-        setShape
+        setShape,
+        scale
       };
       setContext(contextVal);
     }

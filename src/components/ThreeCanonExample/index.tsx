@@ -21,9 +21,9 @@ const ThreeCanonExample = () => {
 
       {/* <Car /> */}
 
-      <SillyCar />
+      {/* <SillyCar /> */}
 
-      <MeshProvider mass={0} scale={[100, 1, 100]} position={[0, -2, 0]}>
+      <MeshProvider isStatic mass={0} scale={[100, 1, 100]} position={[0, -2, 0]}>
         <MeshStandardMaterial color={[0, 1, 0]} />
         <BoxGeometry />
         <BoxShape />

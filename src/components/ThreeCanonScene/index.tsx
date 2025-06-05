@@ -1,9 +1,7 @@
 "use client"
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef } from "react";
 import * as THREE from "three";
-import * as CANNON from "cannon";
-import { FirstPersonControls } from 'three/addons/controls/FirstPersonControls.js';
 import { useThreeContext } from "@/providers/ThreeContext";
 // import Cube from "../cube/Cube";
 
@@ -15,11 +13,18 @@ export default function ThreeCanonScene({ children }: { children: React.ReactNod
 
   const threeContextRef = useRef(threeContext);
 
+  let a = 0;
 
   const animate = () => {
     const { scene, camera, renderer, bodies, frameFunctions, clock, isSimulationPaused } = threeContextRef.current;
     
     requestAnimationFrame(() => animate());
+
+    if (a === 0 && bodies.length == 2) {
+      console.log(bodies);
+      console.log(bodies[0].body.translation());
+      a = 1;
+    }
 
     if (isSimulationPaused) {
         // If paused, don't step the physics world
@@ -34,8 +39,13 @@ export default function ThreeCanonScene({ children }: { children: React.ReactNod
     });
 
     for (const body of bodies) {
-      body.mesh.position.copy(body.body.position);
-      body.mesh.quaternion.copy(body.body.quaternion);
+      body.mesh.position.x = body.body.translation().x;
+      body.mesh.position.y = body.body.translation().y;
+      body.mesh.position.z = body.body.translation().z;
+
+      body.mesh.quaternion.copy(body.body.rotation());
+      // body.mesh.position.copy(body.body.position);
+      // body.mesh.quaternion.copy(body.body.quaternion);
     }
 
     if (scene && renderer && camera) {

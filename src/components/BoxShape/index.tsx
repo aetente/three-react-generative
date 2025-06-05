@@ -3,8 +3,7 @@
 import { useMeshContext } from "@/providers/MeshContext";
 import { useThreeContext } from "@/providers/ThreeContext";
 import { useEffect } from "react";
-
-import * as CANNON from "cannon";
+import RAPIER from "@dimforge/rapier3d";
 
 const BoxShape = () => {
 
@@ -14,7 +13,8 @@ const BoxShape = () => {
 
   useEffect(() => {
     if (threeContext?.scene && meshContext?.setShape && meshContext?.mesh && !meshContext?.body) {
-      const theShape = new CANNON.Box(new CANNON.Vec3(0.5, 0.5, 0.5));
+      const actualScale = meshContext.scale || [1, 1, 1];
+      const theShape = new RAPIER.Cuboid(actualScale[0] / 2, actualScale[1] / 2, actualScale[2] / 2);
       meshContext.setShape(theShape);
     }
   }, [threeContext, threeContext?.scene, meshContext])

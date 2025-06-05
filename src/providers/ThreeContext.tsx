@@ -2,20 +2,20 @@
 
 import { createContext, useContext, useEffect, useState } from 'react';
 import * as THREE from 'three';
-import * as CANNON from "cannon";
+import RAPIER from '@dimforge/rapier3d';
 
 type IThreeContext = {
   scene: THREE.Scene
   renderer: THREE.WebGLRenderer
-  world: CANNON.World
+  world: RAPIER.World
   camera?: THREE.Camera
-  bodies: { body: CANNON.Body, mesh: THREE.Mesh }[]
+  bodies: { body: RAPIER.RigidBody, mesh: THREE.Mesh }[]
   controls?: THREE.FirstPersonControls | THREE.OrbitControls
   frameFunctions?: ((delta?: number) => void)[]
   clock?: THREE.Clock
   startedScene?: boolean
   isSimulationPaused?: boolean
-  addBody: (body: CANNON.Body, mesh: THREE.Mesh) => void
+  addBody: (body: RAPIER.RigidBody, mesh: THREE.Mesh) => void
   addCamera: (camera: THREE.Camera) => void
   addControls: (controls: THREE.FirstPersonControls | THREE.OrbitControls) => void
   addFrameFunction: (frameFunction: () => void) => void
@@ -33,7 +33,7 @@ export const ThreeProvider: React.FC<{
 
   const [context, setContext] = useState<IThreeContext>(null)
 
-  const addBody = (body: CANNON.Body, mesh: THREE.Mesh) => {
+  const addBody = (body: RAPIER.RigidBody, mesh: THREE.Mesh) => {
     setContext(previousContext => {
       // previousContext?.world.addBody(body);
       return { ...previousContext, bodies: [...previousContext.bodies, { body, mesh }] }
@@ -50,13 +50,17 @@ export const ThreeProvider: React.FC<{
 
   const setIsSimulationPaused = (isSimulationPaused: boolean) => setContext(previousContext => ({ ...previousContext, isSimulationPaused }))
 
-  useEffect(() => {
+  const initContext = async () => {
+    // const RAPIER = await import('@dimforge/rapier3d');
+    console.log(RAPIER);
     const scene = new THREE.Scene();
     const renderer = new THREE.WebGLRenderer();
-    const world = new CANNON.World();
-    world.gravity.set(0, -9.82, 0);
+    const world = new RAPIER.World({ x: 0.0, y: -9.82, z: 0.0 });
     const clock = new THREE.Clock();
-    const doWorldUpdate = (delta?: number) => world.step(delta);
+    const doWorldUpdate = (delta?: number) => {
+      world.timestep = delta || 1/60;
+      world.step()
+    };
     setContext({
       scene,
       renderer,
@@ -73,6 +77,10 @@ export const ThreeProvider: React.FC<{
       setStartedScene,
       setIsSimulationPaused
     })
+  }
+
+  useEffect(() => {
+    initContext()
   }, [])
 
   return (
