@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@dimforge/rapier3d": "^0.17.3",
     "cannon": "^0.6.2",
     "next": "15.3.2",
     "react": "^19.0.0",
