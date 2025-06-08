@@ -13,10 +13,20 @@ const VerySillyCar = () => {
   const [finished, setFinished] = useState(false);
   const [car, setCar] = useState<RAPIER.RigidBody>(null);
   const path = useRef([{ x: Math.random() * 50 - 25, y: 0, z: Math.random() * 50 - 25 }]);
+  const [pathValue, setPathValue] = useState(path.current);
+  const pathPoint = useRef(null);
 
-  const forwardRotationDifferenceThreshold = 0.1;
+  const forwardRotationDifferenceThreshold = 0.2;
 
   const carDimensions = { width: 2, height: 1, length: 5 };
+  const wheelDimensions = { radius: 0.5, height: 0.25 };
+
+  const wheelsPositions = [
+    [0.9, -0.1, 1.9], // left front wheel (red)
+    [-0.9, -0.1, 1.9], // right front wheel (blue)
+    [0.9, -0.1, -1.9], // left back wheel
+    [-0.9, -0.1, -1.9], // right back wheel
+  ]
 
   function worldToLocalVector(worldVec, body) {
     const rot = body.rotation(); // Quaternion
@@ -154,25 +164,37 @@ const VerySillyCar = () => {
     // console.log(cross);
     // console.log(dot)
 
-    const threshold = Math.cos(Math.PI / 6);
-    const inFront = dot >= threshold;
+    const threshold = Math.cos(Math.PI / 2.1);
+    const inFront = dot > threshold;
 
     // console.log(inFront);
 
-    if (inFront) {
-      if (cross > 0) {
+    // if (inFront) {
+      if (cross < 0) {
         // return 'target is to the LEFT';
+        // console.log("LEFT");
         return -1;
-      } else if (cross < 0) {
+      } else if (cross > 0) {
         // return 'target is to the RIGHT';
+        // console.log("RIGHT");
         return 1;
       } else {
         // return 'target is directly ahead or behind';
         return 0;
       }
-    } else {
-      return 1;
-    };
+    // } else {
+      // if (cross > 0) {
+      //   // return 'target is to the LEFT';
+      //   return -1;
+      // } else if (cross < 0) {
+      //   // return 'target is to the RIGHT';
+      //   return 1;
+      // } else {
+      //   // return 'target is directly ahead or behind';
+      //   return 0;
+      // }
+    //   return 1;
+    // };
   }
 
   function lookAt(body: RAPIER.RigidBody, target: { x: number, y: number, z: number }, delta: number) {
@@ -202,32 +224,50 @@ const VerySillyCar = () => {
     const rotation = lookAt(body, target, delta);
 
     const rotationDifference = quaternionOpposition(rotation, body.rotation());
-    const threeQuaternion = new THREE.Quaternion(rotation.x, rotation.y, rotation.z, rotation.w);
+    const threeQuaternion = new THREE.Quaternion(rotation.x, -rotation.y, rotation.z, rotation.w);
     const eulerRotation = new THREE.Euler().setFromQuaternion(threeQuaternion);
-    const torqVal = 5000 * delta;
-    let torqMultipler = torqVal;
+    const torqVal = 20000 * delta;
+    let torqMultipler = 100;
+    const notLookingAtTarget = rotationDifference > forwardRotationDifferenceThreshold
 
     // if we are not in front of the target
     // we want to rotate faster
-    if (rotationDifference > forwardRotationDifferenceThreshold) {
+    if (notLookingAtTarget) {
       const angvel = car.angvel();
       const angvelMag = Math.hypot(angvel.x, angvel.y, angvel.z);
-      // console.log(angvelMag);
-      torqMultipler *= 2000;
+      const moveDirectionBackAndForth = (new Date()).getTime()
+      const turnSign = Math.sign(Math.sin(moveDirectionBackAndForth * 0.01))
+      // console.log(rotation);
+      const v = car.linvel(); // { x, y, z }
+      let speed = Math.sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
+      if (speed > 1) speed = 1
+      torqMultipler = 20000 / (angvelMag * speed * speed * 0.2);
+      if (Math.abs(torqMultipler) > 2000) torqMultipler = 2000 * Math.sign(torqMultipler)
+      // console.log(torqMultipler)
     } else {
-      torqMultipler *= rotationDifference;
+      // torqMultipler *= Math.sqrt(rotationDifference);
+      torqMultipler *= 20
+      torqMultipler += Math.sign(torqMultipler) * rotationDifference * 1000
     }
     // console.log(rotationDifference)
     // torqMultipler *= torqMultipler
-    if (torqMultipler > torqVal) torqMultipler = torqVal
+    if (Math.abs(torqMultipler) > 2000) {
+      // console.log("aha")
+      torqMultipler = 2000 * Math.sign(torqMultipler)
+    }
     const normalizedEuler = new THREE.Vector3().setFromEuler(eulerRotation).normalize().multiplyScalar(torqMultipler);
     // console.log(rotation )
-    const sign = signOfTarget(body, target);
-    const turnRotation = sign * normalizedEuler.y
+    const sign = notLookingAtTarget ? 1 : signOfTarget(body, target);
+    // console.log(sign)
+    let finalRotationValue = sign * normalizedEuler.y
+    if (notLookingAtTarget && Math.abs(finalRotationValue) < 100) {
+      finalRotationValue = Math.sign(finalRotationValue) * 100
+    }
+    console.log(finalRotationValue, notLookingAtTarget)
     // console.log(turnRotation)
     // console.log(torqVal, rotationDifference, torqMultipler)
     // console.log(sign * normalizedEuler.y)
-    body.applyTorqueImpulse({ x: 0, y: turnRotation, z: 0 }, true);
+    body.applyTorqueImpulse({ x: 0, y: finalRotationValue, z: 0 }, true);
   }
 
   const testMove = (delta: number) => {
@@ -254,6 +294,8 @@ const VerySillyCar = () => {
 
         const rotationDifference = quaternionOpposition(rotation, car.rotation());
 
+        const notLookingAtTarget = rotationDifference > forwardRotationDifferenceThreshold;
+
         const v = car.linvel(); // { x, y, z }
         const speed = Math.sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
         const moveDirectionBackAndForth = (new Date()).getTime()
@@ -261,14 +303,24 @@ const VerySillyCar = () => {
         // so if we are not in direction to the target
         // move car back and forth to be able to rotate
         const distanceToTarger = Math.hypot(pathVal.x - pos.x, pathVal.y - pos.y, pathVal.z - pos.z);
-        const triggerDistance = 10;
-        const scaledDistance = distanceToTarger <= triggerDistance ? distanceToTarger / triggerDistance : 1;
-        const forceWorld = rotationDifference > forwardRotationDifferenceThreshold ?
-          { x: 0, y: 0, z: -speed + 200 * Math.sin(moveDirectionBackAndForth * 0.01) } :
-          { x: 0, y: 0, z: 10000 * delta * scaledDistance }
+        const triggerDistance = 20;
+        const angvel = car.angvel();
+        let angvelMag = Math.hypot(angvel.x, angvel.y, angvel.z);
+        // if angvelMag > some value -> press breaks
+        // angvelMag *= 10;
+        // if (angvelMag < 1) angvelMag = 1
+        let scaledDistance = distanceToTarger <= triggerDistance ? distanceToTarger / (triggerDistance) : notLookingAtTarget ? 1 : Math.sqrt(distanceToTarger);
+        scaledDistance *= scaledDistance;
+        if (scaledDistance < 0.3) scaledDistance = 0.3
+        const forwardSpeed = (10000 - 1000 * angvelMag) * delta * scaledDistance;
+        // console.log(forwardSpeed, angvelMag, distanceToTarger)
+        // { x: 0, y: 0, z: -speed + 100 * Math.sin(moveDirectionBackAndForth * 0.01) }
+        const forceWorld = notLookingAtTarget ?
+          { x: 0, y: 0, z: -speed + 100 * Math.sin(moveDirectionBackAndForth * 0.005) } :
+          { x: 0, y: 0, z: forwardSpeed }
         const localForce = worldToLocalVector(forceWorld, car);
         // console.log(speed);
-        if (speed > 20) return;
+        if (speed > 10) return;
         car.applyImpulse(localForce, true);
         // car.setLinvel(localForce, true);
       })
@@ -289,10 +341,12 @@ const VerySillyCar = () => {
           let pathVal = path.current[0]
           const carPos = car.translation();
           const distanceToTarger = Math.hypot(pathVal.x - carPos.x, pathVal.y - carPos.y, pathVal.z - carPos.z);
-          console.log(distanceToTarger, pathVal, carPos);  
+          // console.log(distanceToTarger, pathVal, carPos);
           if (distanceToTarger < 3) {
+            console.log("TARGET REACHED");
             pathVal = { x: Math.random() * 50 - 25, y: 0, z: Math.random() * 50 - 25 }
             path.current = [pathVal];
+            setPathValue([pathVal]);
             // TODO: go from path values, if no values, go to random
           }
           torqToRarget(car, pathVal, delta);
@@ -307,7 +361,8 @@ const VerySillyCar = () => {
   useEffect(() => {
     if (threeContext?.scene && threeContext?.world && threeContext?.startedScene && !finished && !car) {
       const theShape = new RAPIER.Cuboid(carDimensions.width / 2, carDimensions.height / 2, carDimensions.length / 2);
-      const colliderDesc = new RAPIER.ColliderDesc(theShape);
+      const colliderDesc = new RAPIER.ColliderDesc(theShape)
+        .setFriction(2);
       const bodyDesc = RAPIER.RigidBodyDesc.dynamic()
         .setAdditionalMass(200)
         .setAngularDamping(0);
@@ -324,13 +379,33 @@ const VerySillyCar = () => {
 
   useEffect(() => {
     if (car && !finished) {
-
-      const carMesh = new THREE.Mesh(new THREE.BoxGeometry(carDimensions.width, carDimensions.height, carDimensions.length), new THREE.MeshStandardMaterial({ color: 0xffffff }));
+      const carBottomGeometry = new THREE.BoxGeometry(carDimensions.width, carDimensions.height, carDimensions.length)
+      carBottomGeometry.translate(0, 0.2, 0);
+      const carMesh = new THREE.Mesh(carBottomGeometry, new THREE.MeshStandardMaterial({ color: 0xffffff }));
       carMesh.useQuaternion = true;
       threeContext?.scene.add(carMesh);
-      carMesh.position.set(car.translation().x, car.translation().y, car.translation().z);
-      carMesh.quaternion.set(car.rotation().x, car.rotation().y, car.rotation().z, car.rotation().w);
+      const carMeshUpGeometry = new THREE.BoxGeometry(carDimensions.width, carDimensions.height, carDimensions.length / 2);
+      carMeshUpGeometry.translate(0, carDimensions.height, 0);
+      const carMeshUp = new THREE.Mesh(carMeshUpGeometry, new THREE.MeshStandardMaterial({ color: 0xffffff }));
+      carMeshUp.useQuaternion = true;
+      threeContext?.scene.add(carMeshUp);
       threeContext?.addBody(car, carMesh);
+      threeContext?.addBody(car, carMeshUp);
+
+      wheelsPositions.forEach((wheelPosition, i) => {
+        const wheelGeometry = new THREE.CylinderGeometry(wheelDimensions.radius, wheelDimensions.radius, wheelDimensions.height);
+        wheelGeometry.rotateZ(Math.PI / 2);
+        wheelGeometry.translate(wheelPosition[0], wheelPosition[1], wheelPosition[2]);
+        const wheelMesh = new THREE.Mesh(wheelGeometry, new THREE.MeshStandardMaterial({ color: 0x000000 }));
+        threeContext?.scene.add(wheelMesh);
+        threeContext?.addBody(car, wheelMesh);
+        if (i <= 1) {
+          threeContext?.addFrameFunction(() => {
+            wheelMesh.rotation.y = car.angvel().y * 100;
+          })
+        }
+
+      });
 
       setFinished(true);
 
@@ -345,6 +420,22 @@ const VerySillyCar = () => {
 
     }
   }, [car])
+
+  useEffect(() => {
+    if (threeContext?.scene && threeContext?.world && threeContext?.startedScene) {
+      if (pathPoint.current) {
+        threeContext?.scene.remove(pathPoint.current);
+      }
+      if (path.current) {
+
+        const pathPointerMesh = new THREE.Mesh(new THREE.BoxGeometry(1, 100, 1), new THREE.MeshBasicMaterial({ color: 0xffff00 }));
+        threeContext?.scene.add(pathPointerMesh);
+        pathPointerMesh.position.set(path.current[0].x, path.current[0].y, path.current[0].z);
+
+        pathPoint.current = pathPointerMesh
+      }
+    }
+  }, [threeContext, pathValue])
 
   return <></>
 }
