@@ -82,6 +82,7 @@ const MeshProvider = ({
 
     const body = threeContext?.world.createRigidBody(bodyDesc);
     const collider = threeContext?.world.createCollider(colliderDesc, body);
+    collider.setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS);
 
 
     // body.addShape(shape)

@@ -7,6 +7,8 @@ import Camera from "../Camera";
 import FirstPersonControlsComponent from "../FirstPersonControlsComponent";
 import Car from "../Car";
 import SillyCar from "../SillyCar";
+import RapierCar from "../RapierCar";
+import VerySillyCar from "../VerySillyCar";
 
 const ThreeCanonExample = () => {
   return (
@@ -22,6 +24,11 @@ const ThreeCanonExample = () => {
       {/* <Car /> */}
 
       {/* <SillyCar /> */}
+
+      {/* <RapierCar /> */}
+      <VerySillyCar />
+      <VerySillyCar />
+      <VerySillyCar />
 
       <MeshProvider isStatic mass={0} scale={[100, 1, 100]} position={[0, -2, 0]}>
         <MeshStandardMaterial color={[0, 1, 0]} />

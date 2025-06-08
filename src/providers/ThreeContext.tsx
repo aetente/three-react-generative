@@ -15,6 +15,7 @@ type IThreeContext = {
   clock?: THREE.Clock
   startedScene?: boolean
   isSimulationPaused?: boolean
+  eventQueue: RAPIER.EventQueue
   addBody: (body: RAPIER.RigidBody, mesh: THREE.Mesh) => void
   addCamera: (camera: THREE.Camera) => void
   addControls: (controls: THREE.FirstPersonControls | THREE.OrbitControls) => void
@@ -52,14 +53,15 @@ export const ThreeProvider: React.FC<{
 
   const initContext = async () => {
     // const RAPIER = await import('@dimforge/rapier3d');
-    console.log(RAPIER);
+    // console.log(RAPIER);
     const scene = new THREE.Scene();
     const renderer = new THREE.WebGLRenderer();
     const world = new RAPIER.World({ x: 0.0, y: -9.82, z: 0.0 });
+    const eventQueue = new RAPIER.EventQueue(true);
     const clock = new THREE.Clock();
     const doWorldUpdate = (delta?: number) => {
       world.timestep = delta || 1/60;
-      world.step()
+      world.step(eventQueue)
     };
     setContext({
       scene,
@@ -70,6 +72,7 @@ export const ThreeProvider: React.FC<{
       frameFunctions:[doWorldUpdate],
       startedScene: false,
       isSimulationPaused: false,
+      eventQueue,
       addBody,
       addCamera,
       addControls,
