@@ -2,6 +2,7 @@
 
 import { useThreeContext } from "@/providers/ThreeContext";
 import { useEffect, useRef, useState } from "react";
+import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
 
 import RAPIER from "@dimforge/rapier3d";
 import * as THREE from "three";
@@ -164,37 +165,37 @@ const VerySillyCar = () => {
     // console.log(cross);
     // console.log(dot)
 
-    const threshold = Math.cos(Math.PI / 2.1);
+    const threshold = Math.cos(Math.PI/8);
     const inFront = dot > threshold;
 
-    // console.log(inFront);
+    // console.log(inFront ? "front" : "behind");
 
-    // if (inFront) {
+    if (inFront) {
       if (cross < 0) {
         // return 'target is to the LEFT';
         // console.log("LEFT");
-        return -1;
+        return [-1, true];
       } else if (cross > 0) {
         // return 'target is to the RIGHT';
         // console.log("RIGHT");
-        return 1;
+        return [1, true];
       } else {
         // return 'target is directly ahead or behind';
-        return 0;
+        return [0, true];
       }
-    // } else {
-      // if (cross > 0) {
-      //   // return 'target is to the LEFT';
-      //   return -1;
-      // } else if (cross < 0) {
-      //   // return 'target is to the RIGHT';
+    } else {
+      if (cross < 0) {
+        // return 'target is to the LEFT';
+        return [1, false];
+      } else if (cross > 0) {
+        // return 'target is to the RIGHT';
+        return [-1, false];
+      } else {
+        // return 'target is directly ahead or behind';
+        return [1, false];
+      }
       //   return 1;
-      // } else {
-      //   // return 'target is directly ahead or behind';
-      //   return 0;
-      // }
-    //   return 1;
-    // };
+    };
   }
 
   function lookAt(body: RAPIER.RigidBody, target: { x: number, y: number, z: number }, delta: number) {
@@ -220,6 +221,11 @@ const VerySillyCar = () => {
     // body.setRotation(rotation, true);
   }
 
+  // it should be that if we don't look at target (threshold)
+  // we rotate on spot with default direction
+  // otherwise we move forward and rotate towards target
+  // and if we are driving we can't rotate too much
+
   const torqToRarget = (body: RAPIER.RigidBody, target: { x: number, y: number, z: number }, delta: number) => {
     const rotation = lookAt(body, target, delta);
 
@@ -228,46 +234,45 @@ const VerySillyCar = () => {
     const eulerRotation = new THREE.Euler().setFromQuaternion(threeQuaternion);
     const torqVal = 20000 * delta;
     let torqMultipler = 100;
-    const notLookingAtTarget = rotationDifference > forwardRotationDifferenceThreshold
+    const [sign, isFront] = signOfTarget(body, target);
+    // const notLookingAtTarget = rotationDifference > forwardRotationDifferenceThreshold
 
     // if we are not in front of the target
     // we want to rotate faster
-    if (notLookingAtTarget) {
+    // let sign = 1;
+    if (!isFront) {
+      // sign = 1;
       const angvel = car.angvel();
       const angvelMag = Math.hypot(angvel.x, angvel.y, angvel.z);
-      const moveDirectionBackAndForth = (new Date()).getTime()
-      const turnSign = Math.sign(Math.sin(moveDirectionBackAndForth * 0.01))
       // console.log(rotation);
       const v = car.linvel(); // { x, y, z }
       let speed = Math.sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
       if (speed > 1) speed = 1
       torqMultipler = 20000 / (angvelMag * speed * speed * 0.2);
-      if (Math.abs(torqMultipler) > 2000) torqMultipler = 2000 * Math.sign(torqMultipler)
+      if (Math.abs(torqMultipler) > 200) torqMultipler = 200 * Math.sign(torqMultipler)
       // console.log(torqMultipler)
     } else {
       // torqMultipler *= Math.sqrt(rotationDifference);
-      torqMultipler *= 20
-      torqMultipler += Math.sign(torqMultipler) * rotationDifference * 1000
-    }
-    // console.log(rotationDifference)
-    // torqMultipler *= torqMultipler
-    if (Math.abs(torqMultipler) > 2000) {
-      // console.log("aha")
-      torqMultipler = 2000 * Math.sign(torqMultipler)
+      torqMultipler = 10
+      
+      // torqMultipler += Math.sign(torqMultipler) * rotationDifference * 1000
     }
     const normalizedEuler = new THREE.Vector3().setFromEuler(eulerRotation).normalize().multiplyScalar(torqMultipler);
     // console.log(rotation )
-    const sign = notLookingAtTarget ? 1 : signOfTarget(body, target);
     // console.log(sign)
-    let finalRotationValue = sign * normalizedEuler.y
-    if (notLookingAtTarget && Math.abs(finalRotationValue) < 100) {
+    let finalRotationValue = sign * Math.abs(normalizedEuler.y)
+    if (!isFront) {
       finalRotationValue = Math.sign(finalRotationValue) * 100
+      console.log(finalRotationValue)
     }
-    console.log(finalRotationValue, notLookingAtTarget)
+    if (isFront) {
+      // console.log(sign, finalRotationValue)
+    }
     // console.log(turnRotation)
     // console.log(torqVal, rotationDifference, torqMultipler)
     // console.log(sign * normalizedEuler.y)
-    body.applyTorqueImpulse({ x: 0, y: finalRotationValue, z: 0 }, true);
+    // isFront ? body.resetTorques(true) : body.applyTorqueImpulse({ x: 0, y: finalRotationValue, z: 0 }, true);
+    body.applyTorqueImpulse({ x: 0, y: finalRotationValue, z: 0 }, true)
   }
 
   const testMove = (delta: number) => {
@@ -281,7 +286,7 @@ const VerySillyCar = () => {
           y: pathVal.y - pos.y,
           z: pathVal.z - pos.z,
         };
-
+        
         // Normalize direction
         const len = Math.hypot(forward.x, forward.y, forward.z);
         forward.x /= len;
@@ -294,7 +299,10 @@ const VerySillyCar = () => {
 
         const rotationDifference = quaternionOpposition(rotation, car.rotation());
 
-        const notLookingAtTarget = rotationDifference > forwardRotationDifferenceThreshold;
+        // the problem is that we start to move back and forth for angle which is still considere as front
+        // const notLookingAtTarget = rotationDifference > forwardRotationDifferenceThreshold;
+        
+        const [sign, isFront] = signOfTarget(car, pathVal);
 
         const v = car.linvel(); // { x, y, z }
         const speed = Math.sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
@@ -303,19 +311,19 @@ const VerySillyCar = () => {
         // so if we are not in direction to the target
         // move car back and forth to be able to rotate
         const distanceToTarger = Math.hypot(pathVal.x - pos.x, pathVal.y - pos.y, pathVal.z - pos.z);
-        const triggerDistance = 20;
+        const triggerDistance = 5;
         const angvel = car.angvel();
         let angvelMag = Math.hypot(angvel.x, angvel.y, angvel.z);
         // if angvelMag > some value -> press breaks
         // angvelMag *= 10;
         // if (angvelMag < 1) angvelMag = 1
-        let scaledDistance = distanceToTarger <= triggerDistance ? distanceToTarger / (triggerDistance) : notLookingAtTarget ? 1 : Math.sqrt(distanceToTarger);
+        let scaledDistance = distanceToTarger <= triggerDistance ? distanceToTarger / (triggerDistance) : !isFront ? 1 : Math.sqrt(distanceToTarger);
         scaledDistance *= scaledDistance;
-        if (scaledDistance < 0.3) scaledDistance = 0.3
-        const forwardSpeed = (10000 - 1000 * angvelMag) * delta * scaledDistance;
+        if (scaledDistance < 1) scaledDistance = 1
+        const forwardSpeed = (5000 - 100 * angvelMag) * delta * scaledDistance;
         // console.log(forwardSpeed, angvelMag, distanceToTarger)
         // { x: 0, y: 0, z: -speed + 100 * Math.sin(moveDirectionBackAndForth * 0.01) }
-        const forceWorld = notLookingAtTarget ?
+        const forceWorld = !isFront ?
           { x: 0, y: 0, z: -speed + 100 * Math.sin(moveDirectionBackAndForth * 0.005) } :
           { x: 0, y: 0, z: forwardSpeed }
         const localForce = worldToLocalVector(forceWorld, car);
