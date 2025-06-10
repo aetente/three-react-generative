@@ -29,12 +29,12 @@ const VerySillyCar = () => {
     [-0.9, -0.1, -1.9], // right back wheel
   ]
 
-  function worldToLocalVector(worldVec, body) {
+  function worldToLocalVector(worldVec: { x: number, y: number, z: number }, body: RAPIER.RigidBody | RAPIER.Collider) {
     const rot = body.rotation(); // Quaternion
     return rotateVectorByQuaternion(worldVec, rot);
   }
 
-  function rotateVectorByQuaternion(v, q) {
+  function rotateVectorByQuaternion(v: { x: number, y: number, z: number }, q : { x: number, y: number, z: number, w: number }) {
     const x = v.x, y = v.y, z = v.z;
     const qx = q.x, qy = q.y, qz = q.z, qw = q.w;
 
@@ -115,6 +115,12 @@ const VerySillyCar = () => {
     // dot product
     // how much vectors allign in the same direction
     return q1.x * q2.x + q1.y * q2.y + q1.z * q2.z + q1.w * q2.w;
+  }
+
+  function dotEuler(e1: { x: number, y: number, z: number }, e2: { x: number, y: number, z: number }) {
+    // dot product
+    // how much vectors allign in the same direction
+    return e1.x * e2.x + e1.y * e2.y + e1.z * e2.z;
   }
 
   function clamp(value: number, min: number, max: number) {
@@ -263,7 +269,7 @@ const VerySillyCar = () => {
     let finalRotationValue = sign * Math.abs(normalizedEuler.y)
     if (!isFront) {
       finalRotationValue = Math.sign(finalRotationValue) * 100
-      console.log(finalRotationValue)
+      // console.log(finalRotationValue)
     }
     if (isFront) {
       // console.log(sign, finalRotationValue)
@@ -279,6 +285,16 @@ const VerySillyCar = () => {
     if (car) {
       const carCollider = car.collider(0);
       threeContext?.world.contactPairsWith(carCollider, (contact) => {
+        const contactUp = worldToLocalVector({ x: 0, y: 1, z: 0 }, contact);
+        const bodyUp = worldToLocalVector({ x: 0, y: 1, z: 0 }, car);
+        const cosBetweenBodayAndGround = dotEuler(bodyUp, contactUp);
+        // 1 means aligned (cos(0))
+        // 0 means cos(90) perpendicular
+        // -1 means cos(180) opposite
+        if (cosBetweenBodayAndGround < 0.3) {
+          // console.log(cosBetweenBodayAndGround)
+          return
+        }
         const pathVal = path.current[0]
         const pos = car.translation(); // current position
         const forward = {
@@ -339,6 +355,12 @@ const VerySillyCar = () => {
     if (car) {
       const carCollider = car.collider(0);
       threeContext?.world.contactPairsWith(carCollider, (contact) => {
+        const contactUp = worldToLocalVector({ x: 0, y: 1, z: 0 }, contact);
+        const bodyUp = worldToLocalVector({ x: 0, y: 1, z: 0 }, car);
+        const cosBetweenBodayAndGround = dotEuler(bodyUp, contactUp);
+        if (cosBetweenBodayAndGround < 0.3) {
+          return
+        }
         // const steerAngle = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 5);
         // car.setRotation({ x: steerAngle.x, y: steerAngle.y, z: steerAngle.z, w: steerAngle.w }, true);
         const angvel = car.angvel();
@@ -380,6 +402,7 @@ const VerySillyCar = () => {
       collider.setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS);
 
       body.setTranslation({ x: 0, y: 2, z: 0 }, true);
+      // body.setRotation({ x: 0, y: 0, z: Math.PI/3, w: 1 }, true);
 
       setCar(body);
     }
