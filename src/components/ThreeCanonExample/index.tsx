@@ -27,8 +27,8 @@ const ThreeCanonExample = () => {
 
       {/* <RapierCar /> */}
       <VerySillyCar />
-      {/* <VerySillyCar />
       <VerySillyCar />
+      {/* <VerySillyCar />
       <VerySillyCar />
       <VerySillyCar />
       <VerySillyCar />

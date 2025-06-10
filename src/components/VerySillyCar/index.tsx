@@ -364,13 +364,51 @@ const VerySillyCar = () => {
   const testSteer = (delta: number) => {
     if (car) {
       const carCollider = car.collider(0);
+      let isLeftWheelTouchingGround = false
+      let isRightWheelTouchingGround = false
+      let contactValLeft = null;
+      let contactValRight = null;
+      // check if front wheels touching ground
       threeContext?.world.contactPairsWith(wheels[0].collider(0), (contact) => {
-        const contactUp = worldToLocalVector({ x: 0, y: 1, z: 0 }, contact);
+        if (contact.handle !== carCollider.handle) {
+          isLeftWheelTouchingGround = true
+          contactValLeft = contact
+        }
+      })
+      threeContext?.world.contactPairsWith(wheels[1].collider(0), (contact) => {
+        if (contact.handle !== carCollider.handle) {
+          isRightWheelTouchingGround = true
+          contactValRight = contact
+        }
+      })
+      // threeContext?.world.contactPairsWith(wheels[0].collider(0), (contact) => {
+      // if any wheel touches ground and we have info where they touching
+      if ((contactValLeft || contactValRight) && (isLeftWheelTouchingGround || isRightWheelTouchingGround)) {
+        // now check that car is up right relative to what front wheels are touching
+        // get up vector of car
         const bodyUp = worldToLocalVector({ x: 0, y: 1, z: 0 }, car);
-        const cosBetweenBodayAndGround = dotEuler(bodyUp, contactUp);
-        if (cosBetweenBodayAndGround < 0.3) {
+        // set to -2 because -1 will be minimum possible value and less than that means there is no contact
+        let cosBetweenBodayAndGroundLeft = -2;
+        if (contactValLeft) {
+          // get up vector of what left front wheel is touching
+          const contactUpLeft = worldToLocalVector({ x: 0, y: 1, z: 0 }, contactValLeft);
+          // get dot value (cosine of angle between vectors) between body up and what left front wheel is touching
+          cosBetweenBodayAndGroundLeft = dotEuler(bodyUp, contactUpLeft);
+        }
+
+        let cosBetweenBodayAndGroundRight = -2;
+        if (contactValRight) {
+          // get up vector of what right front wheel is touching
+          const contactUpRight = worldToLocalVector({ x: 0, y: 1, z: 0 }, contactValRight);
+          // get dot value (cosine of angle between vectors) between body up and what right front wheel is touching
+          cosBetweenBodayAndGroundRight = dotEuler(bodyUp, contactUpRight);
+        }
+
+        // if both angles are more than acos(0.3) (somewhere between 60 and 90 degrees) don't steer the car (don't physically rotate it in this case)
+        if (cosBetweenBodayAndGroundLeft < 0.3 && cosBetweenBodayAndGroundRight < 0.3) {
           return
         }
+
         // const steerAngle = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 5);
         // car.setRotation({ x: steerAngle.x, y: steerAngle.y, z: steerAngle.z, w: steerAngle.w }, true);
         const angvel = car.angvel();
@@ -394,7 +432,8 @@ const VerySillyCar = () => {
           // console.log("AAAAAAAAAAA", angvel.y)
           car.applyTorqueImpulse({ x: 0, y: -angvel.y * 10, z: 0 }, true);
         }
-      })
+      }
+      // })
     }
   }
 
@@ -434,7 +473,6 @@ const VerySillyCar = () => {
       const motorsArray = []
       wheelsArray.forEach((wheel, i) => {
 
-        console.log(wheel)
         const wheelRoatateAxis = { x: i < 2 ? -1 : 1, y: 0, z: 0 };
 
         // if (i > 1) {
