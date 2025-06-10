@@ -27,6 +27,7 @@ const ThreeCanonExample = () => {
 
       {/* <RapierCar /> */}
       <VerySillyCar />
+      {/* <VerySillyCar />
       <VerySillyCar />
       <VerySillyCar />
       <VerySillyCar />
@@ -36,8 +37,7 @@ const ThreeCanonExample = () => {
       <VerySillyCar />
       <VerySillyCar />
       <VerySillyCar />
-      <VerySillyCar />
-      <VerySillyCar />
+      <VerySillyCar /> */}
 
       <MeshProvider isStatic mass={0} scale={[1000, 1, 1000]} position={[0, -2, 0]}>
         <MeshStandardMaterial color={[0, 1, 0]} />

@@ -15,6 +15,10 @@ const VerySillyCar = () => {
   const [car, setCar] = useState<RAPIER.RigidBody>(null);
   const path = useRef([{ x: Math.random() * 50 - 25, y: 0, z: Math.random() * 50 - 25 }]);
   const [pathValue, setPathValue] = useState(path.current);
+  const [wheels, setWheels] = useState<RAPIER.RigidBody[]>([]);
+  const [motors, setMotors] = useState<RAPIER.RevoluteImpulseJoint[]>([]);
+
+
   const pathPoint = useRef(null);
 
   const forwardRotationDifferenceThreshold = 0.2;
@@ -23,10 +27,10 @@ const VerySillyCar = () => {
   const wheelDimensions = { radius: 0.5, height: 0.25 };
 
   const wheelsPositions = [
-    [0.9, -0.1, 1.9], // left front wheel (red)
-    [-0.9, -0.1, 1.9], // right front wheel (blue)
-    [0.9, -0.1, -1.9], // left back wheel
-    [-0.9, -0.1, -1.9], // right back wheel
+    [0.9, -0.4, 1.9], // left front wheel (red)
+    [-0.9, -0.4, 1.9], // right front wheel (blue)
+    [0.9, -0.4, -1.9], // left back wheel
+    [-0.9, -0.4, -1.9], // right back wheel
   ]
 
   function worldToLocalVector(worldVec: { x: number, y: number, z: number }, body: RAPIER.RigidBody | RAPIER.Collider) {
@@ -34,7 +38,7 @@ const VerySillyCar = () => {
     return rotateVectorByQuaternion(worldVec, rot);
   }
 
-  function rotateVectorByQuaternion(v: { x: number, y: number, z: number }, q : { x: number, y: number, z: number, w: number }) {
+  function rotateVectorByQuaternion(v: { x: number, y: number, z: number }, q: { x: number, y: number, z: number, w: number }) {
     const x = v.x, y = v.y, z = v.z;
     const qx = q.x, qy = q.y, qz = q.z, qw = q.w;
 
@@ -171,7 +175,7 @@ const VerySillyCar = () => {
     // console.log(cross);
     // console.log(dot)
 
-    const threshold = Math.cos(Math.PI/8);
+    const threshold = Math.cos(Math.PI / 8);
     const inFront = dot > threshold;
 
     // console.log(inFront ? "front" : "behind");
@@ -260,7 +264,7 @@ const VerySillyCar = () => {
     } else {
       // torqMultipler *= Math.sqrt(rotationDifference);
       torqMultipler = 10
-      
+
       // torqMultipler += Math.sign(torqMultipler) * rotationDifference * 1000
     }
     const normalizedEuler = new THREE.Vector3().setFromEuler(eulerRotation).normalize().multiplyScalar(torqMultipler);
@@ -302,7 +306,7 @@ const VerySillyCar = () => {
           y: pathVal.y - pos.y,
           z: pathVal.z - pos.z,
         };
-        
+
         // Normalize direction
         const len = Math.hypot(forward.x, forward.y, forward.z);
         forward.x /= len;
@@ -317,7 +321,7 @@ const VerySillyCar = () => {
 
         // the problem is that we start to move back and forth for angle which is still considere as front
         // const notLookingAtTarget = rotationDifference > forwardRotationDifferenceThreshold;
-        
+
         const [sign, isFront] = signOfTarget(car, pathVal);
 
         const v = car.linvel(); // { x, y, z }
@@ -351,10 +355,16 @@ const VerySillyCar = () => {
     }
   }
 
+  const wheelsMove = () => {
+    motors.forEach((motor) => {
+      motor.configureMotorVelocity(100, 10)
+    })
+  }
+
   const testSteer = (delta: number) => {
     if (car) {
       const carCollider = car.collider(0);
-      threeContext?.world.contactPairsWith(carCollider, (contact) => {
+      threeContext?.world.contactPairsWith(wheels[0].collider(0), (contact) => {
         const contactUp = worldToLocalVector({ x: 0, y: 1, z: 0 }, contact);
         const bodyUp = worldToLocalVector({ x: 0, y: 1, z: 0 }, car);
         const cosBetweenBodayAndGround = dotEuler(bodyUp, contactUp);
@@ -389,29 +399,93 @@ const VerySillyCar = () => {
   }
 
   useEffect(() => {
-    if (threeContext?.scene && threeContext?.world && threeContext?.startedScene && !finished && !car) {
+    if (threeContext?.scene && threeContext?.world && threeContext?.startedScene && !finished && !car && !wheels.length) {
       const theShape = new RAPIER.Cuboid(carDimensions.width / 2, carDimensions.height / 2, carDimensions.length / 2);
       const colliderDesc = new RAPIER.ColliderDesc(theShape)
         .setFriction(2);
       const bodyDesc = RAPIER.RigidBodyDesc.dynamic()
-        .setAdditionalMass(200)
-        .setAngularDamping(0);
+        .setAdditionalMass(200);
 
       const body = threeContext?.world.createRigidBody(bodyDesc);
       const collider = threeContext?.world.createCollider(colliderDesc, body);
       collider.setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS);
 
-      body.setTranslation({ x: 0, y: 2, z: 0 }, true);
+      body.setTranslation({ x: 0, y: 1, z: 0 }, true);
       // body.setRotation({ x: 0, y: 0, z: Math.PI/3, w: 1 }, true);
 
       setCar(body);
+
+      const wheelsArray = wheelsPositions.map((wheelPos) => {
+        const wheelShape = new RAPIER.Cylinder(wheelDimensions.height / 2, wheelDimensions.radius);
+        const wheelColliderDesc = new RAPIER.ColliderDesc(wheelShape)
+          .setRotation(new THREE.Quaternion().setFromAxisAngle(new RAPIER.Vector3(0, 0, 1), -Math.PI / 2))
+        const wheelBodyDesc = RAPIER.RigidBodyDesc.dynamic()
+          .setAdditionalMass(10)
+          .setTranslation(0, 0, 0)
+        // .setRotation({ x: Math.PI / 2, y: 0, z: 0, w: 1 });
+
+        const wheelBody = threeContext?.world.createRigidBody(wheelBodyDesc);
+        // wheelBody.setRotation({ x: 0, y: 0, z: Math.PI / 2, w: 1 }, true);
+        const wheelCollider = threeContext?.world.createCollider(wheelColliderDesc, wheelBody);
+        return wheelBody
+      });
+      setWheels(wheelsArray);
+
+      const motorsArray = []
+      wheelsArray.forEach((wheel, i) => {
+
+        console.log(wheel)
+        const wheelRoatateAxis = { x: i < 2 ? -1 : 1, y: 0, z: 0 };
+
+        // if (i > 1) {
+        const anchor1 = {
+          x: wheelsPositions[i][0],
+          y: wheelsPositions[i][1],
+          z: wheelsPositions[i][2]
+        }
+        const anchor2 = {
+          x: 0,
+          y: 0,
+          z: 0
+        }
+        const rotateJoint = RAPIER.JointData.revolute(
+          anchor1,
+          anchor2,
+          wheelRoatateAxis
+        );
+        const wheelJoint = threeContext?.world.createImpulseJoint(rotateJoint, body, wheel, true);
+        wheelJoint.setContactsEnabled(false);
+        if (i > 1) {
+          motorsArray.push(wheelJoint);
+        }
+        // } else {
+        //   const anchor1 = {
+        //     x: 0,
+        //     y: 0,
+        //     z: 0
+        //   }
+        //   const anchor2 = {
+        //     x: 0,
+        //     y: 0,
+        //     z: 0
+        //   }
+        //   const rotateJoint = RAPIER.JointData.revolute(
+        //     anchor1,
+        //     anchor2,
+        //     wheelRoatateAxis
+        //   );
+        //   const wheelJoint = threeContext?.world.createImpulseJoint(rotateJoint, frontSteering[i], wheel, true);
+        // }
+        // wheel.setRotation(wheelAngle, true);
+      });
+      setMotors(motorsArray);
     }
   }, [threeContext])
 
   useEffect(() => {
-    if (car && !finished) {
+    if (car && wheels.length && !finished) {
       const carBottomGeometry = new THREE.BoxGeometry(carDimensions.width, carDimensions.height, carDimensions.length)
-      carBottomGeometry.translate(0, 0.2, 0);
+      // carBottomGeometry.translate(0, 0.2, 0);
       const carMesh = new THREE.Mesh(carBottomGeometry, new THREE.MeshStandardMaterial({ color: 0xffffff }));
       carMesh.useQuaternion = true;
       threeContext?.scene.add(carMesh);
@@ -422,32 +496,32 @@ const VerySillyCar = () => {
       threeContext?.scene.add(carMeshUp);
       threeContext?.addBody(car, carMesh);
       threeContext?.addBody(car, carMeshUp);
-
-      wheelsPositions.forEach((wheelPosition, i) => {
-        const wheelGeometry = new THREE.CylinderGeometry(wheelDimensions.radius, wheelDimensions.radius, wheelDimensions.height);
+      wheels.forEach((wheel) => {
+        const wheelGeometry = new THREE.CylinderGeometry(wheelDimensions.radius, wheelDimensions.radius, wheelDimensions.height, 8);
         wheelGeometry.rotateZ(Math.PI / 2);
-        wheelGeometry.translate(wheelPosition[0], wheelPosition[1], wheelPosition[2]);
+        // wheelGeometry.translate(wheelPosition.x, wheelPosition.y, wheelPosition.z);
         const wheelMesh = new THREE.Mesh(wheelGeometry, new THREE.MeshStandardMaterial({ color: 0x000000 }));
         threeContext?.scene.add(wheelMesh);
-        threeContext?.addBody(car, wheelMesh);
-        if (i <= 1) {
-          threeContext?.addFrameFunction(() => {
-            wheelMesh.rotation.y = car.angvel().y * 100;
-          })
-        }
+        threeContext?.addBody(wheel, wheelMesh);
 
+        wheel.resetForces(true);
+        wheel.resetTorques(true);
       });
+      car.resetForces(true);
+      car.resetTorques(true);
 
       setFinished(true);
 
       setTimeout(() => {
-        threeContext?.addFrameFunction(testMove);
+        // threeContext?.addFrameFunction(testMove);
         // testMove();
+        console.log("wheelsMove")
+        wheelsMove();
       }, 1000);
 
       setTimeout(() => {
         threeContext?.addFrameFunction(testSteer);
-      }, 2000)
+      }, 0)
 
     }
   }, [car])
