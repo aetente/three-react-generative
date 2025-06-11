@@ -18,8 +18,18 @@ const VerySillyCar = () => {
   const [wheels, setWheels] = useState<RAPIER.RigidBody[]>([]);
   const [motors, setMotors] = useState<RAPIER.RevoluteImpulseJoint[]>([]);
 
+  const upsideDownTimer = useRef<number | null>(null);
+
 
   const pathPoint = useRef(null);
+  const isLookingAtTarget = useRef(false);
+
+  // TODO: need to come up with some lyfecycle
+  // for example next phases:
+  // going toward target
+  // looking for new target
+  // braking
+  // idle
 
   const forwardRotationDifferenceThreshold = 0.2;
 
@@ -27,10 +37,10 @@ const VerySillyCar = () => {
   const wheelDimensions = { radius: 0.5, height: 0.25 };
 
   const wheelsPositions = [
-    [0.9, -0.4, 1.9], // left front wheel (red)
-    [-0.9, -0.4, 1.9], // right front wheel (blue)
-    [0.9, -0.4, -1.9], // left back wheel
-    [-0.9, -0.4, -1.9], // right back wheel
+    [1, -0.4, 1.9], // left front wheel (red)
+    [-1, -0.4, 1.9], // right front wheel (blue)
+    [1, -0.4, -1.9], // left back wheel
+    [-1, -0.4, -1.9], // right back wheel
   ]
 
   function worldToLocalVector(worldVec: { x: number, y: number, z: number }, body: RAPIER.RigidBody | RAPIER.Collider) {
@@ -251,6 +261,7 @@ const VerySillyCar = () => {
     // we want to rotate faster
     // let sign = 1;
     if (!isFront) {
+      // console.log(rotationDifference)
       // sign = 1;
       const angvel = car.angvel();
       const angvelMag = Math.hypot(angvel.x, angvel.y, angvel.z);
@@ -258,12 +269,19 @@ const VerySillyCar = () => {
       const v = car.linvel(); // { x, y, z }
       let speed = Math.sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
       if (speed > 1) speed = 1
-      torqMultipler = 20000 / (angvelMag * speed * speed * 0.2);
+      torqMultipler = 200 * rotationDifference;
       if (Math.abs(torqMultipler) > 200) torqMultipler = 200 * Math.sign(torqMultipler)
       // console.log(torqMultipler)
+      if (isLookingAtTarget.current) {
+        isLookingAtTarget.current = false
+      }
     } else {
       // torqMultipler *= Math.sqrt(rotationDifference);
       torqMultipler = 10
+      if (!isLookingAtTarget.current) {
+        body.setAngvel({ x: 0, y: 0, z: 0 }, true);
+        isLookingAtTarget.current = true
+      }
 
       // torqMultipler += Math.sign(torqMultipler) * rotationDifference * 1000
     }
@@ -272,7 +290,7 @@ const VerySillyCar = () => {
     // console.log(sign)
     let finalRotationValue = sign * Math.abs(normalizedEuler.y)
     if (!isFront) {
-      finalRotationValue = Math.sign(finalRotationValue) * 100
+      finalRotationValue = Math.sign(finalRotationValue) * 200
       // console.log(finalRotationValue)
     }
     if (isFront) {
@@ -356,9 +374,36 @@ const VerySillyCar = () => {
   }
 
   const wheelsMove = () => {
-    motors.forEach((motor) => {
-      motor.configureMotorVelocity(100, 10)
-    })
+
+    const pathVal = path.current[0]
+    const pos = car.translation(); // current position
+    const forward = {
+      x: pathVal.x - pos.x,
+      y: pathVal.y - pos.y,
+      z: pathVal.z - pos.z,
+    };
+
+    // Normalize direction
+    const len = Math.hypot(forward.x, forward.y, forward.z);
+    forward.x /= len;
+    forward.y /= len;
+    forward.z /= len;
+
+    // the problem is that we start to move back and forth for angle which is still considere as front
+    // const notLookingAtTarget = rotationDifference > forwardRotationDifferenceThreshold;
+
+    const [sign, isFront] = signOfTarget(car, pathVal);
+    const moveDirectionBackAndForth = (new Date()).getTime()
+
+    if (isFront) {
+      motors.forEach((motor) => {
+        motor.configureMotorVelocity(100, 3)
+      })
+    } else {
+      motors.forEach((motor) => {
+        motor.configureMotorVelocity(100 * Math.round(Math.sin(moveDirectionBackAndForth || 1)), 10)
+      })
+    }
   }
 
   const testSteer = (delta: number) => {
@@ -388,26 +433,28 @@ const VerySillyCar = () => {
         // get up vector of car
         const bodyUp = worldToLocalVector({ x: 0, y: 1, z: 0 }, car);
         // set to -2 because -1 will be minimum possible value and less than that means there is no contact
-        let cosBetweenBodayAndGroundLeft = -2;
+        let cosBetweenBodyAndGroundLeft = -2;
         if (contactValLeft) {
           // get up vector of what left front wheel is touching
           const contactUpLeft = worldToLocalVector({ x: 0, y: 1, z: 0 }, contactValLeft);
           // get dot value (cosine of angle between vectors) between body up and what left front wheel is touching
-          cosBetweenBodayAndGroundLeft = dotEuler(bodyUp, contactUpLeft);
+          cosBetweenBodyAndGroundLeft = dotEuler(bodyUp, contactUpLeft);
         }
 
-        let cosBetweenBodayAndGroundRight = -2;
+        let cosBetweenBodyAndGroundRight = -2;
         if (contactValRight) {
           // get up vector of what right front wheel is touching
           const contactUpRight = worldToLocalVector({ x: 0, y: 1, z: 0 }, contactValRight);
           // get dot value (cosine of angle between vectors) between body up and what right front wheel is touching
-          cosBetweenBodayAndGroundRight = dotEuler(bodyUp, contactUpRight);
+          cosBetweenBodyAndGroundRight = dotEuler(bodyUp, contactUpRight);
         }
 
         // if both angles are more than acos(0.3) (somewhere between 60 and 90 degrees) don't steer the car (don't physically rotate it in this case)
-        if (cosBetweenBodayAndGroundLeft < 0.3 && cosBetweenBodayAndGroundRight < 0.3) {
+        if (cosBetweenBodyAndGroundLeft < 0.3 && cosBetweenBodyAndGroundRight < 0.3) {
           return
         }
+        // TODO: logic above maybe will become redundant after making actual steering wheels
+        // but I can use this to rotate car up right if it is upside down
 
         // const steerAngle = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 5);
         // car.setRotation({ x: steerAngle.x, y: steerAngle.y, z: steerAngle.z, w: steerAngle.w }, true);
@@ -432,16 +479,68 @@ const VerySillyCar = () => {
           // console.log("AAAAAAAAAAA", angvel.y)
           car.applyTorqueImpulse({ x: 0, y: -angvel.y * 10, z: 0 }, true);
         }
+      } else if (!(isLeftWheelTouchingGround || isRightWheelTouchingGround)) {
+        let noCollision = true;
+        threeContext?.world.contactPairsWith(car.collider(0), (contact) => {
+          if (
+            contact.handle != wheels[0].collider(0).handle &&
+            contact.handle != wheels[1].collider(0).handle &&
+            contact.handle != wheels[2].collider(0).handle &&
+            contact.handle != wheels[3].collider(0).handle
+          ) {
+            noCollision = false;
+            // get up vector of what left front wheel is touching
+            const contactUp = worldToLocalVector({ x: 0, y: 1, z: 0 }, contact);
+            const bodyUp = worldToLocalVector({ x: 0, y: 1, z: 0 }, car);
+            // get dot value (cosine of angle between vectors) between body up and what left front wheel is touching
+            const cosBetweenBodyAndGround = dotEuler(bodyUp, contactUp);
+            if (cosBetweenBodyAndGround <= 0) {
+              // car is upside down
+              if (!upsideDownTimer.current) {
+                const newUpsideDownTimer = setTimeout(() => {
+                  // console.log("rotate the car")
+                  fixUpsideDownCar(car);
+                }, 3000)
+                upsideDownTimer.current = newUpsideDownTimer;
+              }
+            } else {
+              if (upsideDownTimer.current) {
+                // console.log("here?", cosBetweenBodyAndGround)
+                clearTimeout(upsideDownTimer.current);
+                upsideDownTimer.current = null;
+              }
+            }
+          }
+        })
+        if (noCollision && upsideDownTimer.current) {
+          // console.log("here?")
+          clearTimeout(upsideDownTimer.current);
+          upsideDownTimer.current = null;
+        }
       }
       // })
     }
+  }
+
+  function resetBodyForces(body: RAPIER.RigidBody) {
+    body.setLinvel({ x: 0, y: 0, z: 0 }, false);
+    body.setAngvel({ x: 0, y: 0, z: 0 }, false);
+    body.resetForces(false);
+    body.resetTorques(false);
+  }
+
+  function fixUpsideDownCar(body: RAPIER.RigidBody) {
+    const currentPosition = body.translation();
+    body.setTranslation({ x: currentPosition.x, y: currentPosition.y + 5, z: currentPosition.z }, true);
+    body.setRotation({ x: 0, y: 0, z: 0, w: 1 }, true);
+    resetBodyForces(body);
   }
 
   useEffect(() => {
     if (threeContext?.scene && threeContext?.world && threeContext?.startedScene && !finished && !car && !wheels.length) {
       const theShape = new RAPIER.Cuboid(carDimensions.width / 2, carDimensions.height / 2, carDimensions.length / 2);
       const colliderDesc = new RAPIER.ColliderDesc(theShape)
-        .setFriction(2);
+        .setFriction(1);
       const bodyDesc = RAPIER.RigidBodyDesc.dynamic()
         .setAdditionalMass(200);
 
@@ -449,7 +548,7 @@ const VerySillyCar = () => {
       const collider = threeContext?.world.createCollider(colliderDesc, body);
       collider.setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS);
 
-      body.setTranslation({ x: 0, y: 1, z: 0 }, true);
+      body.setTranslation({ x: 0, y: 5, z: 0 }, true);
       // body.setRotation({ x: 0, y: 0, z: Math.PI/3, w: 1 }, true);
 
       setCar(body);
@@ -458,8 +557,9 @@ const VerySillyCar = () => {
         const wheelShape = new RAPIER.Cylinder(wheelDimensions.height / 2, wheelDimensions.radius);
         const wheelColliderDesc = new RAPIER.ColliderDesc(wheelShape)
           .setRotation(new THREE.Quaternion().setFromAxisAngle(new RAPIER.Vector3(0, 0, 1), -Math.PI / 2))
+          .setFriction(4);
         const wheelBodyDesc = RAPIER.RigidBodyDesc.dynamic()
-          .setAdditionalMass(10)
+          .setAdditionalMass(50)
           .setTranslation(0, 0, 0)
         // .setRotation({ x: Math.PI / 2, y: 0, z: 0, w: 1 });
 
@@ -542,19 +642,21 @@ const VerySillyCar = () => {
         threeContext?.scene.add(wheelMesh);
         threeContext?.addBody(wheel, wheelMesh);
 
-        wheel.resetForces(true);
-        wheel.resetTorques(true);
+        resetBodyForces(wheel);
       });
-      car.resetForces(true);
-      car.resetTorques(true);
+      // car.resetForces(true);
+      // car.resetTorques(true);
+      resetBodyForces(car);
 
       setFinished(true);
+
+      car.sleep()
 
       setTimeout(() => {
         // threeContext?.addFrameFunction(testMove);
         // testMove();
-        console.log("wheelsMove")
-        wheelsMove();
+        // console.log("wheelsMove")
+        threeContext?.addFrameFunction(wheelsMove);
       }, 1000);
 
       setTimeout(() => {
