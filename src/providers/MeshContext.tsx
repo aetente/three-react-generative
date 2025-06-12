@@ -11,6 +11,7 @@ type IMeshContext = {
   material?: THREE.Material
   texture?: THREE.Texture
   body?: RAPIER.RigidBody
+  shape?: RAPIER.Shape
   scale?: [number, number, number]
   setGeometry: (geometry: THREE.BufferGeometry) => void
   setTexture: (texture: THREE.Texture) => void
@@ -53,11 +54,16 @@ const MeshProvider = ({
     mesh.position.set(actualPosition[0], actualPosition[1], actualPosition[2]);
     const actualScale = scale || [1, 1, 1]
     mesh.scale.set(actualScale[0], actualScale[1], actualScale[2]);
-    setContext(previousContext => ({ ...previousContext, mesh, geometry }))
+    setContext(previousContext => {
+      setBodyToAdd({ body: previousContext?.body, mesh });
+      if (previousContext?.body) {
+        setShouldUpdateBodies(true);
+      }
+      return { ...previousContext, mesh, geometry }
+    })
   }
 
   const setShape = (shape: RAPIER.Shape) => {
-    const actualScale = scale || [1, 1, 1];
     const actualMass = mass || mass === 0 ? mass : 1;
     const actualPosition = position || [0, 0, 0];
 
@@ -93,9 +99,11 @@ const MeshProvider = ({
 
     // threeContext?.world.createRigidBody()
     setContext(previousContext => {
-      setShouldUpdateBodies(true);
       setBodyToAdd({ body: collider.parent() as RAPIER.RigidBody, mesh: previousContext?.mesh });
-      return { ...previousContext, body }
+      if (previousContext?.mesh) {
+        setShouldUpdateBodies(true);
+      }
+      return { ...previousContext, body, shape }
     });
   }
 

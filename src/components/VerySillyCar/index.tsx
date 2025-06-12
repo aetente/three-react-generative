@@ -31,6 +31,10 @@ const VerySillyCar = () => {
   // braking
   // idle
 
+  // TODO: car should probably build sub path
+  // not just directly go to target
+  // but it is probably for future if getting to target will get complex
+
   const forwardRotationDifferenceThreshold = 0.2;
 
   const carDimensions = { width: 2, height: 1, length: 5 };
@@ -276,8 +280,13 @@ const VerySillyCar = () => {
         isLookingAtTarget.current = false
       }
     } else {
+      const pathVal = path.current[0]
+      const pos = car.translation(); // current position
+      let distanceToTarget = Math.hypot(pathVal.x - pos.x, pathVal.y - pos.y, pathVal.z - pos.z);
+      distanceToTarget = distanceToTarget < 1 ? 1 : distanceToTarget
       // torqMultipler *= Math.sqrt(rotationDifference);
-      torqMultipler = 10
+      torqMultipler = 4000 / distanceToTarget
+      // console.log(torqMultipler)
       if (!isLookingAtTarget.current) {
         body.setAngvel({ x: 0, y: 0, z: 0 }, true);
         isLookingAtTarget.current = true
@@ -396,12 +405,16 @@ const VerySillyCar = () => {
     const moveDirectionBackAndForth = (new Date()).getTime()
 
     if (isFront) {
+      let distanceToTarger = Math.hypot(pathVal.x - pos.x, pathVal.y - pos.y, pathVal.z - pos.z);
+      if (distanceToTarger < 1) distanceToTarger = 1
+      let wheelVelocity = 10 * distanceToTarger;
+      if (wheelVelocity > 100) wheelVelocity = 100;
       motors.forEach((motor) => {
-        motor.configureMotorVelocity(100, 3)
+        motor.configureMotorVelocity(wheelVelocity, 4)
       })
     } else {
       motors.forEach((motor) => {
-        motor.configureMotorVelocity(100 * Math.round(Math.sin(moveDirectionBackAndForth || 1)), 10)
+        motor.configureMotorVelocity(100 * Math.round(Math.sin((moveDirectionBackAndForth || 1) * 0.005)), 2)
       })
     }
   }
@@ -463,17 +476,7 @@ const VerySillyCar = () => {
         const angvelMag = Math.hypot(angvel.x, angvel.y, angvel.z);
         // console.log(angvelMag);
         if (angvelMag < 3) {
-          let pathVal = path.current[0]
-          const carPos = car.translation();
-          const distanceToTarger = Math.hypot(pathVal.x - carPos.x, pathVal.y - carPos.y, pathVal.z - carPos.z);
-          // console.log(distanceToTarger, pathVal, carPos);
-          if (distanceToTarger < 3) {
-            console.log("TARGET REACHED");
-            pathVal = { x: Math.random() * 50 - 25, y: 0, z: Math.random() * 50 - 25 }
-            path.current = [pathVal];
-            setPathValue([pathVal]);
-            // TODO: go from path values, if no values, go to random
-          }
+          const pathVal = path.current[0]
           torqToRarget(car, pathVal, delta);
         } else {
           // console.log("AAAAAAAAAAA", angvel.y)
@@ -522,6 +525,19 @@ const VerySillyCar = () => {
     }
   }
 
+  const update = (delta: number) => {
+    let pathVal = path.current[0]
+    const carPos = car.translation();
+    const distanceToTarger = Math.hypot(pathVal.x - carPos.x, pathVal.z - carPos.z);
+    if (distanceToTarger < 3) {
+      console.log("TARGET REACHED");
+      pathVal = { x: Math.random() * 50 - 25, y: 0, z: Math.random() * 50 - 25 }
+      path.current = [pathVal];
+      setPathValue([pathVal]);
+      // TODO: go from path values, if no values, go to random
+    }
+  }
+
   function resetBodyForces(body: RAPIER.RigidBody) {
     body.setLinvel({ x: 0, y: 0, z: 0 }, false);
     body.setAngvel({ x: 0, y: 0, z: 0 }, false);
@@ -531,7 +547,7 @@ const VerySillyCar = () => {
 
   function fixUpsideDownCar(body: RAPIER.RigidBody) {
     const currentPosition = body.translation();
-    body.setTranslation({ x: currentPosition.x, y: currentPosition.y + 5, z: currentPosition.z }, true);
+    body.setTranslation({ x: currentPosition.x, y: currentPosition.y + 1, z: currentPosition.z }, true);
     body.setRotation({ x: 0, y: 0, z: 0, w: 1 }, true);
     resetBodyForces(body);
   }
@@ -548,7 +564,7 @@ const VerySillyCar = () => {
       const collider = threeContext?.world.createCollider(colliderDesc, body);
       collider.setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS);
 
-      body.setTranslation({ x: 0, y: 5, z: 0 }, true);
+      body.setTranslation({ x: 0, y: 20, z: 0 }, true);
       // body.setRotation({ x: 0, y: 0, z: Math.PI/3, w: 1 }, true);
 
       setCar(body);
@@ -652,6 +668,7 @@ const VerySillyCar = () => {
 
       car.sleep()
 
+      threeContext?.addFrameFunction(update);
       setTimeout(() => {
         // threeContext?.addFrameFunction(testMove);
         // testMove();
