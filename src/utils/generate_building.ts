@@ -8,7 +8,7 @@ class BuildingPart {
   public length;
   public isValid;
   public hasRoof;
-  constructor(xValue: number, yValue: number, zValue: number,widthValue: number, lengthValue: number, isValidValue?: boolean) {
+  constructor(xValue: number, yValue: number, zValue: number, widthValue: number, lengthValue: number, isValidValue?: boolean) {
     this.x = xValue;
     this.y = yValue;
     this.z = zValue;
@@ -27,30 +27,30 @@ class BuildingPart {
   }
 }
 
+const generateCellsPositions = (maxDistance: number, cellsPerRow: number) => {
+  const arr = [];
+  const minCellSize = maxDistance / cellsPerRow;
+  const cellSizeDiff = minCellSize / 1.2;
+
+  let currentCellSize = minCellSize + randInRange(-1, 1, Math.random()) * cellSizeDiff;
+  let currentPosition = 0;
+  let cellEnd = currentPosition + currentCellSize;
+  while (cellEnd < maxDistance) {
+    arr.push(currentPosition);
+    currentPosition = cellEnd;
+    currentCellSize = minCellSize + randInRange(-1, 1, Math.random()) * cellSizeDiff;
+    cellEnd += currentCellSize;
+  }
+  return arr;
+}
+
 const generateBuilding = () => {
   const areaSize = { x: 10, y: 10 };
   const floors = 5;
   const cellsPerRow = 10;
 
-  const generateCellsPositions = (maxDistance: number) => {
-    const arr = [];
-    const minCellSize = maxDistance / cellsPerRow;
-    const cellSizeDiff = minCellSize / 1.2;
-
-    let currentCellSize = minCellSize + randInRange(-1, 1, Math.random()) * cellSizeDiff;
-    let currentPosition = 0;
-    let cellEnd = currentPosition + currentCellSize;
-    while (cellEnd < maxDistance) {
-      arr.push(currentPosition);
-      currentPosition = cellEnd;
-      currentCellSize = minCellSize + randInRange(-1, 1, Math.random()) * cellSizeDiff;
-      cellEnd += currentCellSize;
-    }
-    return arr;
-  }
-
-  const generateBuildingParts = (rows:number[], columns:number[]) => {
-    const placedPartsPositions : { [key: string]: BuildingPart } = {};
+  const generateBuildingParts = (rows: number[], columns: number[]) => {
+    const placedPartsPositions: { [key: string]: BuildingPart } = {};
     for (let floor = 0; floor < floors; floor++) {
       for (let i = 1; i < columns.length; i++) {
         for (let j = 1; j < rows.length; j++) {
@@ -71,7 +71,7 @@ const generateBuilding = () => {
 
             b = new BuildingPart(x, y, z, width, length);
             if (floor == floors - 1) b.setRoof();
-            
+
             placedPartsPositions[`${floor}-${i}-${j}`] = b;
 
           } else {
@@ -89,10 +89,10 @@ const generateBuilding = () => {
 
   }
 
-  const columnsPositions = generateCellsPositions(areaSize.x);
-  const rowsPositions = generateCellsPositions(areaSize.y);
+  const columnsPositions = generateCellsPositions(areaSize.x, cellsPerRow);
+  const rowsPositions = generateCellsPositions(areaSize.y, cellsPerRow);
   const buildingParts = generateBuildingParts(rowsPositions, columnsPositions);
   return buildingParts;
 }
 
-export { generateBuilding, BuildingPart }
+export { generateBuilding, generateCellsPositions, BuildingPart }

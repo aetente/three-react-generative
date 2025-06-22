@@ -17,6 +17,7 @@ type IMeshContext = {
   setTexture: (texture: THREE.Texture) => void
   setMaterial: (mesh: THREE.Mesh, material: THREE.Material) => void
   setShape: (shape: RAPIER.Shape) => void
+  getVertex: (geometry: THREE.BufferGeometry) => any
 } | null
 
 const MeshContext = createContext<IMeshContext>(null)
@@ -26,12 +27,14 @@ export const useMeshContext = () => useContext(MeshContext)
 const MeshProvider = ({
   children,
   position,
+  rotation,
   scale,
   mass,
   isStatic
 }: {
   children: React.ReactNode
   position?: [number, number, number]
+  rotation?: { x: number, y: number, z: number, w: number }
   scale?: [number, number, number]
   mass?: number
   isStatic?: boolean
@@ -47,13 +50,33 @@ const MeshProvider = ({
   const [bodyToAdd, setBodyToAdd] = useState<{ body: RAPIER.RigidBody, mesh: THREE.Mesh }>({ body: null, mesh: null });
 
 
+  const getVertex = (geometry: THREE.BufferGeometry) => {
+    const positionAttribute = geometry.getAttribute('position');
+
+    const vertex = new THREE.Vector3();
+
+    console.log("position attribute", positionAttribute);
+
+    const vertexValue = [];
+    for (let i = 0; i < positionAttribute.count; i++) {
+
+      vertex.fromBufferAttribute(positionAttribute, i); // read vertex
+      vertexValue.push(vertex);
+
+    }
+    console.log("vertex", vertex);
+    return vertex;
+  }
+
   const setGeometry = (geometry: THREE.BufferGeometry) => {
     const mesh = new THREE.Mesh(geometry);
     threeContext?.scene.add(mesh);
-    const actualPosition = position || [0, 0, 0]
-    mesh.position.set(actualPosition[0], actualPosition[1], actualPosition[2]);
     const actualScale = scale || [1, 1, 1]
     mesh.scale.set(actualScale[0], actualScale[1], actualScale[2]);
+    const actualPosition = position || [0, 0, 0]
+    mesh.position.set(actualPosition[0], actualPosition[1], actualPosition[2]);
+    const actualRotation = rotation || { x: 0, y: 0, z: 0, w: 1 }
+    mesh.setRotationFromQuaternion(actualRotation);
     setContext(previousContext => {
       setBodyToAdd({ body: previousContext?.body, mesh });
       if (previousContext?.body) {
@@ -66,6 +89,7 @@ const MeshProvider = ({
   const setShape = (shape: RAPIER.Shape) => {
     const actualMass = mass || mass === 0 ? mass : 1;
     const actualPosition = position || [0, 0, 0];
+    const actualRotation = rotation || { x: 0, y: 0, z: 0, w: 1 };
 
 
 
@@ -79,11 +103,13 @@ const MeshProvider = ({
     if (isStatic) {
       bodyDesc = RAPIER.RigidBodyDesc.fixed()
         .setAdditionalMass(actualMass)
-        .setTranslation(actualPosition[0], actualPosition[1], actualPosition[2]);
+        .setTranslation(actualPosition[0], actualPosition[1], actualPosition[2])
+        .setRotation(actualRotation);
     } else {
       bodyDesc = RAPIER.RigidBodyDesc.dynamic()
         .setAdditionalMass(actualMass)
-        .setTranslation(actualPosition[0], actualPosition[1], actualPosition[2]);
+        .setTranslation(actualPosition[0], actualPosition[1], actualPosition[2])
+        .setRotation(actualRotation);
     }
 
     const body = threeContext?.world.createRigidBody(bodyDesc);
@@ -137,6 +163,7 @@ const MeshProvider = ({
         setTexture,
         setMaterial,
         setShape,
+        getVertex,
         scale
       };
       setContext(contextVal);

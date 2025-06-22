@@ -14,6 +14,7 @@ import VerySillyCar from "../VerySillyCar";
 import City from "../City";
 import HeightfieldGeometry from "../HeightfieldGeometry";
 import HeightfieldShape from "../HeightfieldShape";
+import RoadTerrain from "../RoadTerrain";
 
 const ThreeCanonExample = () => {
   return (
@@ -40,6 +41,8 @@ const ThreeCanonExample = () => {
           // heightsFunc={(row, col) => 0}
         />
       </MeshProvider>
+
+      <RoadTerrain />
 
       {/* <Car /> */}
 

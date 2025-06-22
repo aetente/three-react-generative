@@ -69,6 +69,10 @@ const HeightfieldGeometry = () => {
         const hIndex = hmIndex(x, y)
         const hValue = heights[hIndex];
         if (hValue !== undefined) {
+
+          // 1/2 to switch to center
+          // why it only work if divided by 5? (or 10 in this case)
+          // why 5 (10)
           positions.push(
             (x/5 - 1) / 2,
             heights[hIndex],
@@ -99,58 +103,6 @@ const HeightfieldGeometry = () => {
       geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
       geometry.setIndex(indices);
       geometry.computeVertexNormals();
-
-      //------------------
-
-      // const xStep = 1 / (cols - 1);
-      // const zStep = 1 / (rows - 1); 
-
-      // const offsetX = -1 / 2;
-      // const offsetZ = -1 / 2;
-
-      // for (let i = 0; i < rows; ++i) { 
-      //   for (let j = 0; j < cols; ++j) { 
-      //     const height = heights[i * cols + j];
-
-      //     const x = j * xStep + offsetX;
-      //     const y = height * 1
-      //     const z = i * zStep + offsetZ;
-
-      //     positions.push(x, y, z);
-
-      //     // UVs (for applying textures later)
-      //     // Normalize UVs to range from 0 to 1 across the terrain
-      //     uvs.push(j / (cols - 1), i / (rows - 1));
-      //   }
-      // }
-      // console.log("positions", positions, meshContext?.shape, scale )
-
-      // // 2. Generate Indices (Faces)
-      // // We iterate through each 'quad' of the grid and create two triangles.
-      // for (let i = 0; i < rows - 1; ++i) {
-      //   for (let j = 0; j < cols - 1; ++j) {
-      //     // Get the indices of the four corners of the current grid cell
-      //     const topLeft = i * cols + j;
-      //     const topRight = i * cols + (j + 1);
-      //     const bottomLeft = (i + 1) * cols + j;
-      //     const bottomRight = (i + 1) * cols + (j + 1);
-
-      //     // First triangle (bottom-left, top-right, top-left)
-      //     // Winding order matters for face culling. This order generally works for a "top-down" view.
-      //     indices.push(bottomLeft, topRight, topLeft);
-
-      //     // Second triangle (bottom-left, bottom-right, top-right)
-      //     indices.push(bottomLeft, bottomRight, topRight);
-      //   }
-      // }
-
-      // // Set attributes for the BufferGeometry
-      // geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-      // geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
-      // geometry.setIndex(indices); // Set the index attribute
-
-      // // Compute normals for proper lighting (crucial!)
-      // geometry.computeVertexNormals();
 
       meshContext.setGeometry(geometry);
     }
