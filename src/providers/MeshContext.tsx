@@ -71,12 +71,12 @@ const MeshProvider = ({
   const setGeometry = (geometry: THREE.BufferGeometry) => {
     const mesh = new THREE.Mesh(geometry);
     threeContext?.scene.add(mesh);
-    const actualScale = scale || [1, 1, 1]
-    mesh.scale.set(actualScale[0], actualScale[1], actualScale[2]);
-    const actualPosition = position || [0, 0, 0]
-    mesh.position.set(actualPosition[0], actualPosition[1], actualPosition[2]);
     const actualRotation = rotation || { x: 0, y: 0, z: 0, w: 1 }
     mesh.setRotationFromQuaternion(actualRotation);
+    const actualPosition = position || [0, 0, 0]
+    mesh.position.set(actualPosition[0], actualPosition[1], actualPosition[2]);
+    const actualScale = scale || [1, 1, 1]
+    mesh.scale.set(actualScale[0], actualScale[1], actualScale[2]);
     setContext(previousContext => {
       setBodyToAdd({ body: previousContext?.body, mesh });
       if (previousContext?.body) {

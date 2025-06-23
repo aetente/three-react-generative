@@ -18,10 +18,13 @@ const RoadTerrain = () => {
   const [roads, setRoads] = useState<Road[]>([]);
 
   const generateRoads = () => {
-    const columnsPositions = generateCellsPositions(100, 5); // 10 positions of columns in range 0-10
-    const rowsPositions = generateCellsPositions(100, 5); // 10 positions of rows in range 0-10
-    console.log(columnsPositions, rowsPositions);
+    // const columnsPositions = generateCellsPositions(100, 5); // 10 positions of columns in range 0-10
+    const columnsPositions = [0,10,40,60];
+    // const rowsPositions = generateCellsPositions(100, 5); // 10 positions of rows in range 0-10
+    const rowsPositions = [0,20,40,60];
     const roadsArr = [];
+    
+
     for (let i = 0; i < columnsPositions.length - 1; i++) {
       for (let j = 0; j < rowsPositions.length - 1; j++) {
         const roadData1: Road = {
@@ -36,6 +39,27 @@ const RoadTerrain = () => {
         roadsArr.push(roadData2);
       }
     }
+
+    
+    for (let i = 0; i < columnsPositions.length; i++) {
+      const lastRow = rowsPositions[rowsPositions.length - 1];
+      const roadData: Road = {
+        start: { x: columnsPositions[i], y: 0, z: lastRow },
+        end: { x: columnsPositions[i+1], y: 0, z: lastRow },
+      }
+      roadsArr.push(roadData);
+    }
+
+    for (let i = 0; i < rowsPositions.length; i++) {
+      const lastColumn = columnsPositions[columnsPositions.length - 1];
+      const roadData: Road = {
+        start: { x: lastColumn, y: 0, z: rowsPositions[i] },
+        end: { x: lastColumn, y: 0, z: rowsPositions[i+1] },
+      }
+      roadsArr.push(roadData);
+    }
+
+
     setRoads(roadsArr);
   }
 
@@ -67,20 +91,39 @@ const RoadTerrain = () => {
     const midpoint = new THREE.Vector3().addVectors(startVector, endVector).multiplyScalar(0.5);
     const direction = new THREE.Vector3().subVectors(endVector, startVector);
 
-    const length = Math.hypot(direction.x, direction.y, direction.z);
-    console.log(length)
+    // const length = startVector.distanceTo(endVector);
+    const length = direction.length();
+    if (length < 10) {
+      console.log(length, start, end);
+    }
+
+    const roadPosition = {
+      x: startVector.x + direction.x / 2,
+      y: startVector.y + direction.y / 2,
+      z: startVector.z + direction.z / 2
+    }
 
     const lookAtAngle = directionToLookAt(startVector, endVector);
+    console.log("=======================")
+    console.log("length", length)
+
+    console.log("START")
+    console.log(startVector.x, startVector.y, startVector.z);
+    console.log(roadPosition.x - direction.x / 2, roadPosition.y - direction.y / 2, roadPosition.z - direction.z / 2);
+
+    console.log("END")
+    console.log(endVector.x, endVector.y, endVector.z);
+    console.log(roadPosition.x + direction.x / 2, roadPosition.y + direction.y / 2, roadPosition.z + direction.z / 2);
 
     return (
       <Fragment key={`${start.x}-${start.y}-${end.x}-${end.y}-${i}`}>
         <MeshProvider
           isStatic
           rotation={lookAtAngle}
-          position={[midpoint.x, midpoint.y, midpoint.z]}
+          position={[roadPosition.z, roadPosition.y, roadPosition.x]}
           scale={[length, 1, 5]}
         >
-          <MeshStandardMaterial color={[0, 0, 0]} />
+          <MeshStandardMaterial color={[i / roads.length, 0, (1 - i / roads.length)]} />
           <BoxGeometry />
           <BoxShape />
         </MeshProvider>
